@@ -6,7 +6,7 @@
     <title>Turntable with Advanced Controls</title>
     <link rel="icon" href="data:,">
     <style>
-        /* Base Styles */
+        /* Base Styles (Same as before) */
         * {
             margin: 0;
             padding: 0;
@@ -36,59 +36,58 @@
             transition: all 0.5s;
         }
 
-        /* Turntable Container */
+        /* Turntable Container (Responsive) */
         #turntable-container {
             position: relative;
             width: 80vw;
             height: 80vw;
             max-width: 700px;
             max-height: 700px;
-            background-color: #a08c78;
+            background-color: #a08c78; /* Simulating the turntable base */
             border-radius: 10px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-            display: flex;
+            display: flex; 
             justify-content: center;
             align-items: center;
-            perspective: 1000px; 
         }
 
         /* Vinyl Image (Platter) */
         #vinyl {
             display: block;
-            width: 90%;
+            width: 90%; /* Sizing relative to the container */
             height: 90%;
-            border-radius: 50%;
+            border-radius: 50%; 
             cursor: grab;
-            /* La rotation est gérée par JS: on enlève toutes les astuces 3D/backface-visibility */
             transform: rotate(0deg); 
             transition: 0.05s linear;
-            position: absolute;
+            position: absolute; 
             top: 5%; left: 5%;
         }
 
         /* --- CONTROL LAYOUT --- */
+
         #controls-wrapper {
             position: absolute;
             width: 100%;
             height: 100%;
-            pointer-events: none;
+            pointer-events: none; /* Allows clicks to pass through to the vinyl */
         }
-
+        
         #stop-button {
             position: absolute;
             top: 20px;
             left: 20px;
             padding: 10px 20px;
-            background-color: #c0392b;
+            background-color: #c0392b; /* Red button */
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
             z-index: 20;
-            pointer-events: auto;
+            pointer-events: auto; /* Re-enable clicks for the button */
         }
-
+        
         #speed-control {
             position: absolute;
             bottom: 30px;
@@ -100,7 +99,7 @@
             color: #222;
             font-size: 14px;
         }
-
+        
         #pitch-control {
             position: absolute;
             bottom: 30px;
@@ -111,7 +110,7 @@
             font-size: 14px;
         }
 
-        /* --- SPEED KNOB STYLING --- */
+        /* --- SPEED KNOB STYLING (Radio Buttons) --- */
         .knob-container {
             display: flex;
             margin: 0 10px;
@@ -120,9 +119,11 @@
             border-radius: 10px;
             box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
         }
-
-        .knob-container input { display: none; }
-
+        
+        .knob-container input {
+            display: none;
+        }
+        
         .knob-container label {
             background-color: #555;
             color: white;
@@ -135,7 +136,7 @@
         }
 
         .knob-container input:checked + label {
-            background-color: #1abc9c;
+            background-color: #1abc9c; /* Selected color */
             font-weight: bold;
         }
 
@@ -149,7 +150,7 @@
             margin-left: 10px;
             pointer-events: auto;
         }
-
+        
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             height: 20px;
@@ -159,17 +160,22 @@
             cursor: pointer;
             box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
         }
-
-        /* --- Rotation Animations (Supprimées: rotation JS utilisée) --- */
+        
+        /* --- Rotation Animations (Same as before) --- */
+        @keyframes spin-33 { /* ... */ }
+        @keyframes spin-45 { /* ... */ }
+        .spin-33 { animation: spin-33 1.8s linear infinite; }
+        .spin-45 { animation: spin-45 1.3s linear infinite; }
     </style>
 </head>
 
 <body>
     <h1>Loading Audio... Please click the screen to resume audio on mobile.</h1>
-
+    
     <div id="turntable-container">
+        
         <img id="vinyl" src="img/DISC.png" alt="Platine Vinyle">
-
+        
         <div id="controls-wrapper">
             <button id="stop-button">STOP</button>
 
@@ -194,7 +200,6 @@
             </div>
         </div>
     </div>
-
     <script>
     const vinyl = document.getElementById("vinyl");
     const napis = document.querySelector("h1");
@@ -210,8 +215,7 @@
     let lastRotation = 0;
     let center = { x: 0, y: 0 };
     let rotationSpeed = 0;
-    let decelerationInterval = null; 
-    let rotationInterval = null; // Variable pour la rotation automatique JS
+    let decelerationInterval = null; // Important: initialise à null pour un meilleur contrôle
 
     // --- AUDIO VARIABLES & CONSTANTS ---
     let audioContext;
@@ -223,10 +227,6 @@
     const BASE_RATE_45 = 1.2;
     let currentBaseRate = BASE_RATE_33;
     let currentPitchOffset = 0;
-
-    // Vitesse de rotation en degrés/seconde
-    const ROTATION_DEG_PER_SECOND_33 = 360 / 1.8; 
-    const ROTATION_DEG_PER_SECOND_45 = 360 / 1.3; 
 
     // --- Utility Functions ---
     function getAngle(x, y) {
@@ -241,30 +241,9 @@
     }
 
     function applyRotation(angle) {
-        // La rotation est appliquée ici, évitant les classes CSS
-        vinyl.style.transform = `rotate(${angle}deg)`; 
+        vinyl.style.transform = `rotate(${angle}deg)`;
         currentRotation = angle;
     }
-
-    // --- JS Rotation Engine ---
-
-    function startJSRotation(ratePerSecond) {
-        if (rotationInterval) {
-            clearInterval(rotationInterval);
-        }
-
-        const intervalDelay = 10; // Mise à jour toutes les 10ms
-        const degPerTick = ratePerSecond * (intervalDelay / 1000);
-
-        rotationInterval = setInterval(() => {
-            currentRotation += degPerTick;
-            // Boucle la rotation pour éviter les nombres trop grands
-            if (currentRotation >= 360) currentRotation -= 360; 
-            if (currentRotation < 0) currentRotation += 360; 
-            applyRotation(currentRotation);
-        }, intervalDelay);
-    }
-
 
     // --- AUDIO FUNCTIONS ---
 
@@ -277,11 +256,11 @@
             const arrayBuffer = await response.arrayBuffer();
             audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             napis.textContent = "Audio ready. Spinning up...";
-            startAudioSource(currentBaseRate); 
+            // Appel initial pour synchroniser l'état après le chargement
             startAutomaticRotation(getSelectedRpm());
         } catch (error) {
             console.error('Error loading audio:', error);
-            napis.textContent = `Error loading sound file. Check console: ${url}`;
+            napis.textContent = "Error loading sound file. Please check the audio URL.";
         }
     }
 
@@ -299,8 +278,8 @@
 
     function updateAudioRate(rate) {
         if (audioSource) {
-            const finalRate = rate + currentPitchOffset;
-            audioSource.playbackRate.setTargetAtTime(finalRate, audioContext.currentTime, 0.01);
+             const finalRate = rate + currentPitchOffset;
+             audioSource.playbackRate.setTargetAtTime(finalRate, audioContext.currentTime, 0.01);
         }
     }
 
@@ -312,19 +291,13 @@
     // --- RPM and Pitch Management ---
 
     function stopAllRotation() {
-        // Arrête la rotation JS automatique
-        if (rotationInterval !== null) {
-            clearInterval(rotationInterval);
-            rotationInterval = null;
-        }
-        // Arrête la décélération après scratch
+        vinyl.classList.remove('spin-33', 'spin-45');
         if (decelerationInterval !== null) {
             clearInterval(decelerationInterval);
             decelerationInterval = null;
             rotationSpeed = 0;
         }
-        
-        vinyl.style.transform = `rotate(${currentRotation}deg)`; 
+        vinyl.style.transform = '';
 
         if (audioSource) {
             updateAudioRate(0);
@@ -338,15 +311,15 @@
 
         if (currentRpm === "33") {
             currentBaseRate = BASE_RATE_33;
-            startJSRotation(ROTATION_DEG_PER_SECOND_33); // Démarrage rotation JS
         } else if (currentRpm === "45") {
             currentBaseRate = BASE_RATE_45;
-            startJSRotation(ROTATION_DEG_PER_SECOND_45); // Démarrage rotation JS
         } else { // OFF
             napis.textContent = "DJ Scratch Turntable (OFF)";
             return;
         }
 
+        // Apply visual rotation and base audio rate
+        vinyl.classList.add(`spin-${currentRpm}`);
         napis.textContent = `Spinning at ${currentRpm} RPM. Drag to Scratch! Pitch: ${(currentPitchOffset * 100).toFixed(0)}%`;
 
         if (audioBuffer) {
@@ -358,9 +331,12 @@
         currentPitchOffset = pitchValue / 100;
         pitchValueDisplay.textContent = `${pitchValue}%`;
 
-        // Mise à jour immédiate si le disque tourne
-        if (rotationInterval !== null || decelerationInterval !== null) {
-             updateAudioRate(currentBaseRate);
+        // Si la platine tourne (soit automatiquement, soit en décélération), mettez à jour le taux audio
+        if (getSelectedRpm() !== 'off' || decelerationInterval !== null) {
+            // La décélération gère son propre taux, mais nous devons forcer la mise à jour du taux de base
+            if (decelerationInterval === null) {
+                updateAudioRate(currentBaseRate);
+            }
         }
     }
 
@@ -374,15 +350,20 @@
             audioContext.resume();
         }
 
-        // Arrête la rotation automatique JS ou la décélération
-        if (rotationInterval !== null) clearInterval(rotationInterval);
-        rotationInterval = null;
+        vinyl.classList.remove('spin-33', 'spin-45');
         if (decelerationInterval !== null) clearInterval(decelerationInterval);
         decelerationInterval = null;
 
-        // Récupère la rotation actuelle directement
-        // Pas besoin de lire la matrice de transformation puisque currentRotation est à jour
-        // La fonction applyRotation maintient currentRotation à jour
+        const style = window.getComputedStyle(vinyl);
+        const transformMatrix = style.getPropertyValue('transform');
+        let rotationDeg = 0;
+        if (transformMatrix && transformMatrix !== 'none') {
+            const values = transformMatrix.split('(')[1].split(')')[0].split(',');
+            const a = values[0];
+            const b = values[1];
+            rotationDeg = Math.round(Math.atan2(b, a) * (180/Math.PI));
+        }
+        currentRotation = rotationDeg;
 
         isDragging = true;
         updateCenter();
@@ -436,14 +417,13 @@
         if (Math.abs(rotationSpeed) > 0.1) {
             startDeceleration();
         } else {
-            // Reprend la rotation automatique si le disque est immobile
             startAutomaticRotation(getSelectedRpm());
         }
     }
 
     function startDeceleration() {
         const decelerationRate = 0.995;
-        // vinyl.style.transition = '0s'; // Inutile car l'animation est gérée par intervalle
+        vinyl.style.transition = '0s';
 
         decelerationInterval = setInterval(() => {
             currentRotation += rotationSpeed;
@@ -465,18 +445,22 @@
     }
 
     // --- Initial Event Listeners ---
-    
+
+    // 1. RPM Knob listener
     speedKnobs.forEach(knob => {
         knob.addEventListener('change', (e) => {
             startAutomaticRotation(e.target.value);
         });
     });
 
+    // 2. Stop Button listener
     stopButton.addEventListener('click', () => {
+        // Définit explicitement l'état OFF et appelle la logique d'arrêt
         document.getElementById('speed-off').checked = true;
         startAutomaticRotation('off');
     });
 
+    // 3. Pitch Slider listener
     pitchSlider.addEventListener('input', (e) => {
         handlePitchChange(parseFloat(e.target.value));
     });
@@ -487,6 +471,7 @@
     const stopResumeHandler = (e) => {
         e.preventDefault();
         stopAllRotation();
+        // Redémarre sur la valeur sélectionnée après un arrêt manuel
         startAutomaticRotation(getSelectedRpm());
     };
 
@@ -503,11 +488,14 @@
         vinyl.lastTouchTime = now;
     });
 
+    // Chargement initial
     window.addEventListener('resize', updateCenter);
     window.addEventListener('load', () => {
         updateCenter();
-        loadAudio('vinyl.mp3'); 
+        // Lancement de loadAudio. startAutomaticRotation sera appelé une fois l'audio prêt.
+        // Remplacez l'URL si vous utilisez un fichier local !
+        loadAudio('vinyl.mp3');
     });
-    </script>
-</body>
+</script>
+    </body>
 </html>

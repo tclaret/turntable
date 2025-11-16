@@ -49,24 +49,23 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            perspective: 1000px; 
         }
 
-        /* Vinyl Image (Platter) */
+        /* Vinyl Image (Platter) - CORRIGÉ ICI */
         #vinyl {
             display: block;
             width: 90%;
             height: 90%;
             border-radius: 50%;
             cursor: grab;
-            /* La rotation est gérée par JS: on enlève toutes les astuces 3D/backface-visibility */
-            transform: rotate(0deg); 
+            /* FIX: Utilisation de translateZ(0) pour forcer le rendu GPU et éviter l'ovalisation */
+            transform: rotate(0deg) translateZ(0);
             transition: 0.05s linear;
             position: absolute;
             top: 5%; left: 5%;
         }
 
-        /* --- CONTROL LAYOUT --- */
+        /* --- CONTROL LAYOUT --- (Pas de changement) */
         #controls-wrapper {
             position: absolute;
             width: 100%;
@@ -160,7 +159,21 @@
             box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
         }
 
-        /* --- Rotation Animations (Supprimées: rotation JS utilisée) --- */
+        /* --- Rotation Animations (CORRIGÉ ICI) --- */
+        @keyframes spin-33 {
+            /* FIX: Ajout de translateZ(0) */
+            from { transform: rotate(0deg) translateZ(0); }
+            to { transform: rotate(360deg) translateZ(0); }
+        }
+
+        @keyframes spin-45 {
+            /* FIX: Ajout de translateZ(0) */
+            from { transform: rotate(0deg) translateZ(0); }
+            to { transform: rotate(360deg) translateZ(0); }
+        }
+
+        .spin-33 { animation: spin-33 1.8s linear infinite; }
+        .spin-45 { animation: spin-45 1.3s linear infinite; }
     </style>
 </head>
 
@@ -211,7 +224,6 @@
     let center = { x: 0, y: 0 };
     let rotationSpeed = 0;
     let decelerationInterval = null; 
-    let rotationInterval = null; // Variable pour la rotation automatique JS
 
     // --- AUDIO VARIABLES & CONSTANTS ---
     let audioContext;
@@ -223,10 +235,6 @@
     const BASE_RATE_45 = 1.2;
     let currentBaseRate = BASE_RATE_33;
     let currentPitchOffset = 0;
-
-    // Vitesse de rotation en degrés/seconde
-    const ROTATION_DEG_PER_SECOND_33 = 360 / 1.8; 
-    const ROTATION_DEG_PER_SECOND_45 = 360 / 1.3; 
 
     // --- Utility Functions ---
     function getAngle(x, y) {
@@ -241,30 +249,10 @@
     }
 
     function applyRotation(angle) {
-        // La rotation est appliquée ici, évitant les classes CSS
-        vinyl.style.transform = `rotate(${angle}deg)`; 
+        // Le translateZ(0) est inclus ici pour être sûr si l'animation est retirée
+        vinyl.style.transform = `rotate(${angle}deg) translateZ(0)`; 
         currentRotation = angle;
     }
-
-    // --- JS Rotation Engine ---
-
-    function startJSRotation(ratePerSecond) {
-        if (rotationInterval) {
-            clearInterval(rotationInterval);
-        }
-
-        const intervalDelay = 10; // Mise à jour toutes les 10ms
-        const degPerTick = ratePerSecond * (intervalDelay / 1000);
-
-        rotationInterval = setInterval(() => {
-            currentRotation += degPerTick;
-            // Boucle la rotation pour éviter les nombres trop grands
-            if (currentRotation >= 360) currentRotation -= 360; 
-            if (currentRotation < 0) currentRotation += 360; 
-            applyRotation(currentRotation);
-        }, intervalDelay);
-    }
-
 
     // --- AUDIO FUNCTIONS ---
 
@@ -312,19 +300,14 @@
     // --- RPM and Pitch Management ---
 
     function stopAllRotation() {
-        // Arrête la rotation JS automatique
-        if (rotationInterval !== null) {
-            clearInterval(rotationInterval);
-            rotationInterval = null;
-        }
-        // Arrête la décélération après scratch
+        vinyl.classList.remove('spin-33', 'spin-45');
         if (decelerationInterval !== null) {
             clearInterval(decelerationInterval);
             decelerationInterval = null;
             rotationSpeed = 0;
         }
-        
-        vinyl.style.transform = `rotate(${currentRotation}deg)`; 
+        // Assurez-vous que l'état final est également accéléré par le GPU
+        vinyl.style.transform = 'rotate(0deg) translateZ(0)'; 
 
         if (audioSource) {
             updateAudioRate(0);
@@ -338,15 +321,14 @@
 
         if (currentRpm === "33") {
             currentBaseRate = BASE_RATE_33;
-            startJSRotation(ROTATION_DEG_PER_SECOND_33); // Démarrage rotation JS
         } else if (currentRpm === "45") {
             currentBaseRate = BASE_RATE_45;
-            startJSRotation(ROTATION_DEG_PER_SECOND_45); // Démarrage rotation JS
         } else { // OFF
             napis.textContent = "DJ Scratch Turntable (OFF)";
             return;
         }
 
+        vinyl.classList.add(`spin-${currentRpm}`);
         napis.textContent = `Spinning at ${currentRpm} RPM. Drag to Scratch! Pitch: ${(currentPitchOffset * 100).toFixed(0)}%`;
 
         if (audioBuffer) {
@@ -358,9 +340,8 @@
         currentPitchOffset = pitchValue / 100;
         pitchValueDisplay.textContent = `${pitchValue}%`;
 
-        // Mise à jour immédiate si le disque tourne
-        if (rotationInterval !== null || decelerationInterval !== null) {
-             updateAudioRate(currentBaseRate);
+        if (decelerationInterval === null && getSelectedRpm() !== 'off') {
+            updateAudioRate(currentBaseRate);
         }
     }
 
@@ -374,15 +355,20 @@
             audioContext.resume();
         }
 
-        // Arrête la rotation automatique JS ou la décélération
-        if (rotationInterval !== null) clearInterval(rotationInterval);
-        rotationInterval = null;
+        vinyl.classList.remove('spin-33', 'spin-45');
         if (decelerationInterval !== null) clearInterval(decelerationInterval);
         decelerationInterval = null;
 
-        // Récupère la rotation actuelle directement
-        // Pas besoin de lire la matrice de transformation puisque currentRotation est à jour
-        // La fonction applyRotation maintient currentRotation à jour
+        const style = window.getComputedStyle(vinyl);
+        const transformMatrix = style.getPropertyValue('transform');
+        let rotationDeg = 0;
+        if (transformMatrix && transformMatrix !== 'none') {
+            const values = transformMatrix.split('(')[1].split(')')[0].split(',');
+            const a = values[0];
+            const b = values[1];
+            rotationDeg = Math.round(Math.atan2(b, a) * (180/Math.PI));
+        }
+        currentRotation = rotationDeg;
 
         isDragging = true;
         updateCenter();
@@ -436,14 +422,13 @@
         if (Math.abs(rotationSpeed) > 0.1) {
             startDeceleration();
         } else {
-            // Reprend la rotation automatique si le disque est immobile
             startAutomaticRotation(getSelectedRpm());
         }
     }
 
     function startDeceleration() {
         const decelerationRate = 0.995;
-        // vinyl.style.transition = '0s'; // Inutile car l'animation est gérée par intervalle
+        vinyl.style.transition = '0s';
 
         decelerationInterval = setInterval(() => {
             currentRotation += rotationSpeed;
