@@ -375,6 +375,26 @@ window.addEventListener("load", ()=>{
     updateCenter();
     loadAudio("vinyl.mp3");
 });
+window.addEventListener("load", () => {
+    updateCenter();
+    napis.textContent = "Tap to enable audio.";
+});
+
+// Unlock audio on first interaction
+function startUserAudio() {
+    if (!audioContext) {
+        loadAudio("vinyl.mp3");
+    }
+
+    napis.textContent = "Ready. Pick an RPM.";
+
+    document.removeEventListener("click", startUserAudio);
+    document.removeEventListener("touchstart", startUserAudio);
+}
+
+document.addEventListener("click", startUserAudio);
+document.addEventListener("touchstart", startUserAudio);
+
 
 </script>
 </body>
