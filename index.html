@@ -3,15 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Turntable with Advanced Controls</title>
+    <title>Turntable (Smooth Version)</title>
     <link rel="icon" href="data:,">
     <style>
-        /* Base Styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             height: 100vh;
@@ -21,145 +17,106 @@
             justify-content: center;
             background-color: #333;
             user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
+            color: white;
+            font-family: Arial;
         }
 
         h1 {
             position: absolute;
             top: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 30px;
-            transition: all 0.5s;
+            font-size: 24px;
+            text-align: center;
+            width: 100%;
         }
 
-        /* Turntable Container */
         #turntable-container {
             position: relative;
-            width: 80vw;
-            height: 80vw;
-            max-width: 700px;
-            max-height: 700px;
+            width: 80vw; height: 80vw;
+            max-width: 700px; max-height: 700px;
             background-color: #a08c78;
             border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            perspective: 1000px; 
-            transition: transform 0.3s ease-in-out; 
+            perspective: 1000px;
+            transition: transform 0.3s ease-in-out;
+            overflow: hidden;
         }
 
-        /* Classe CSS pour le Zoom */
-        .zoomed-view {
-            transform: scale(1.3); 
-        }
+        .zoomed-view { transform: scale(1.3); }
 
-        /* Vinyl Image (Platter) */
         #vinyl {
-            display: block;
             width: 90%;
             height: 90%;
             border-radius: 50%;
-            cursor: grab;
-            transform: rotate(0deg); 
-            transition: 0.05s linear;
             position: absolute;
+            cursor: grab;
             top: 5%; left: 5%;
+            transform: rotate(0deg);
         }
 
-        /* --- CONTROL LAYOUT --- */
         #controls-wrapper {
             position: absolute;
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             pointer-events: none;
         }
 
-        #stop-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: #c0392b;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 20;
+        button {
             pointer-events: auto;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+
+        #stop-button {
+            background: #c0392b;
+            position: absolute; top: 20px; left: 20px;
         }
 
         #zoom-button {
-            position: absolute; 
-            top: 20px; 
-            left: 120px; 
-            padding: 10px 20px; 
-            background-color: #3498db; 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            z-index: 20; 
-            pointer-events: auto;
+            background: #3498db;
+            position: absolute; top: 20px; left: 120px;
         }
 
-        #speed-control {
+        #speed-control, #pitch-control {
             position: absolute;
             bottom: 30px;
-            left: 30px;
+            font-size: 14px;
             pointer-events: auto;
             display: flex;
             align-items: center;
-            z-index: 20;
-            color: #222;
-            font-size: 14px;
         }
 
-        #pitch-control {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            pointer-events: auto;
-            z-index: 20;
-            color: #222;
-            font-size: 14px;
-        }
+        #speed-control { left: 20px; }
+        #pitch-control { right: 20px; }
 
-        /* --- SPEED KNOB STYLING --- */
         .knob-container {
             display: flex;
-            margin: 0 10px;
             background: #222;
             padding: 5px;
+            margin-left: 10px;
             border-radius: 10px;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
         }
 
         .knob-container input { display: none; }
 
         .knob-container label {
-            background-color: #555;
+            background: #555;
             color: white;
             padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.2s;
             margin: 0 2px;
-            pointer-events: auto;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
         .knob-container input:checked + label {
-            background-color: #1abc9c;
+            background: #1abc9c;
             font-weight: bold;
         }
 
-        /* --- PITCH SLIDER STYLING --- */
         input[type="range"] {
             -webkit-appearance: none;
             width: 150px;
@@ -167,418 +124,258 @@
             background: #ccc;
             border-radius: 5px;
             margin-left: 10px;
-            pointer-events: auto;
         }
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 20px;
-            width: 10px;
-            border-radius: 3px;
+            width: 12px; height: 22px;
             background: #2c3e50;
+            border-radius: 3px;
             cursor: pointer;
-            box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
         }
+
     </style>
 </head>
 
 <body>
-    <h1>Loading Audio... Please click the screen to resume audio on mobile.</h1>
 
-    <div id="turntable-container">
-        <img id="vinyl" src="img/DISC.png" alt="Platine Vinyle">
+<h1>Loading Audio… tap to enable audio on mobile.</h1>
 
-        <div id="controls-wrapper">
-            <button id="stop-button">STOP</button>
-            
-            <button id="zoom-button">ZOOM / NORMAL</button> 
+<div id="turntable-container">
 
-            <div id="speed-control">
-                <label>SPEED:</label>
-                <div class="knob-container">
-                    <input type="radio" id="speed-45" name="rpm-select" value="45">
-                    <label for="speed-45">45</label>
+    <img id="vinyl" src="img/DISC.png">
 
-                    <input type="radio" id="speed-off" name="rpm-select" value="off" checked>
-                    <label for="speed-off">OFF</label>
+    <div id="controls-wrapper">
 
-                    <input type="radio" id="speed-33" name="rpm-select" value="33">
-                    <label for="speed-33">33</label>
-                </div>
-            </div>
+        <button id="stop-button">STOP</button>
+        <button id="zoom-button">ZOOM</button>
 
-            <div id="pitch-control">
-                <label>PITCH:</label>
-                <input type="range" id="pitch-slider" min="-10" max="10" value="0">
-                <span id="pitch-value">0%</span>
+        <div id="speed-control">
+            SPEED:
+            <div class="knob-container">
+                <input type="radio" id="speed-45" name="rpm" value="45">
+                <label for="speed-45">45</label>
+
+                <input type="radio" id="speed-off" name="rpm" value="off" checked>
+                <label for="speed-off">OFF</label>
+
+                <input type="radio" id="speed-33" name="rpm" value="33">
+                <label for="speed-33">33</label>
             </div>
         </div>
+
+        <div id="pitch-control">
+            PITCH:
+            <input type="range" id="pitch-slider" min="-10" max="10" value="0">
+            <span id="pitch-value">0%</span>
+        </div>
+
     </div>
 
-    <script>
-    const vinyl = document.getElementById("vinyl");
-    const napis = document.querySelector("h1");
-    const turntableContainer = document.getElementById("turntable-container"); 
-    const zoomButton = document.getElementById("zoom-button"); 
+</div>
 
-    const stopButton = document.getElementById("stop-button");
-    const speedKnobs = document.querySelectorAll('input[name="rpm-select"]');
-    const pitchSlider = document.getElementById("pitch-slider");
-    const pitchValueDisplay = document.getElementById("pitch-value");
+<script>
+/* ---------------------------------------------------
+          VARIABLES PRINCIPALES
+--------------------------------------------------- */
 
-    let isDragging = false;
-    let startAngle = 0;
-    let currentRotation = 0;
-    let lastRotation = 0;
-    let center = { x: 0, y: 0 };
-    let rotationSpeed = 0;
-    let decelerationInterval = null; 
-    
-    let animationFrameId = null; // Gère la rotation rAF
-    let lastTime = 0; // Timestamp pour le calcul des frames
+const vinyl = document.getElementById("vinyl");
+const napis = document.querySelector("h1");
+const turntable = document.getElementById("turntable-container");
 
-    // --- AUDIO VARIABLES & CONSTANTS ---
-    let audioContext;
-    let audioBuffer;
-    let audioSource;
+const rpmButtons = document.querySelectorAll('input[name="rpm"]');
+const pitchSlider = document.getElementById("pitch-slider");
+const pitchValue = document.getElementById("pitch-value");
 
-    const SCRATCH_SENSITIVITY = 0.05;
-    const BASE_RATE_33 = 0.9;
-    const BASE_RATE_45 = 1.2;
-    let currentBaseRate = BASE_RATE_33;
-    let currentPitchOffset = 0;
+let audioContext, audioBuffer, audioSource;
 
-    // Vitesse de rotation en degrés/seconde
-    const ROTATION_DEG_PER_SECOND_33 = 360 / 1.8; 
-    const ROTATION_DEG_PER_SECOND_45 = 360 / 1.3; 
-    let targetRatePerSecond = 0; // Vitesse cible pour rAF
+let center = {x: 0, y: 0};
+let isDragging = false;
 
-    // --- Utility Functions ---
-    function getAngle(x, y) {
-        return Math.atan2(y - center.y, x - center.x) * (180 / Math.PI);
+let currentRotation = 0;
+
+/* vitesse moteur physique */
+let velocity = 0;          // degrés par frame
+let targetVelocity = 0;    // degrés par frame
+let smoothing = 0.08;      // inertie
+
+/* AUDIO */
+const SCRATCH_SENS = 0.04;
+const BASE_RATE_33 = 0.9;
+const BASE_RATE_45 = 1.2;
+let baseRate = BASE_RATE_33;
+let pitchOffset = 0;
+
+/* --------------------------------------------
+            ROTATION + MOTEUR PHYSIQUE
+-------------------------------------------- */
+
+function engineLoop() {
+
+    /* inertie : on va vers la vitesse cible */
+    velocity += (targetVelocity - velocity) * smoothing;
+
+    currentRotation += velocity;
+    if (currentRotation >= 360) currentRotation -= 360;
+    if (currentRotation < 0) currentRotation += 360;
+
+    vinyl.style.transform = `rotate(${currentRotation}deg)`;
+
+    /* synchro audio */
+    if (audioSource) {
+        const rate = baseRate + (velocity * SCRATCH_SENS) + pitchOffset;
+        audioSource.playbackRate.setValueAtTime(Math.max(0.05, rate), audioContext.currentTime);
     }
 
-    function updateCenter() {
-        const rect = turntableContainer.getBoundingClientRect(); 
-        center.x = rect.left + rect.width / 2;
-        center.y = rect.top + rect.height / 2;
+    requestAnimationFrame(engineLoop);
+}
+
+requestAnimationFrame(engineLoop);
+
+/* --------------------------------------------
+                RPM SELECTION
+-------------------------------------------- */
+
+function setRPM(mode) {
+
+    if (mode === "33") {
+        baseRate = BASE_RATE_33;
+        targetVelocity = 360 / 1.8 / 60;   // deg/frame
+    }
+    else if (mode === "45") {
+        baseRate = BASE_RATE_45;
+        targetVelocity = 360 / 1.3 / 60;
+    }
+    else {
+        targetVelocity = 0;
     }
 
-    function applyRotation(angle) {
-        vinyl.style.transform = `rotate(${angle}deg)`; 
-        currentRotation = angle;
-    }
+}
 
-    // --- JS Rotation Engine (MISE À JOUR rAF) ---
+rpmButtons.forEach(btn=>{
+    btn.addEventListener("change", ()=>setRPM(btn.value));
+});
 
-    function rotateDisc(timestamp) {
-        if (!lastTime) {
-            lastTime = timestamp;
-        }
+/* --------------------------------------------
+                    SCRATCH
+-------------------------------------------- */
 
-        const elapsed = timestamp - lastTime; 
-        lastTime = timestamp;
+function updateCenter() {
+    const r = turntable.getBoundingClientRect();
+    center.x = r.left + r.width/2;
+    center.y = r.top + r.height/2;
+}
 
-        // Calcul du déplacement en degrés basé sur le temps écoulé (pour fluidité)
-        const degPerMillisecond = targetRatePerSecond / 1000;
-        const degToAdd = degPerMillisecond * elapsed;
-        
-        currentRotation += degToAdd;
+function angleAt(e){
+    const x = (e.touches?e.touches[0].clientX:e.clientX);
+    const y = (e.touches?e.touches[0].clientY:e.clientY);
+    return Math.atan2(y-center.y, x-center.x)*180/Math.PI;
+}
 
-        if (currentRotation >= 360) currentRotation -= 360; 
-        if (currentRotation < 0) currentRotation += 360; 
-        
-        applyRotation(currentRotation);
+let lastAngle = 0;
 
-        // Continue la boucle
-        animationFrameId = requestAnimationFrame(rotateDisc);
-    }
+function startDrag(e){
+    if (document.querySelector('input[name="rpm"]:checked').value === "off") return;
 
+    isDragging = true;
+    updateCenter();
 
-    // --- AUDIO FUNCTIONS ---
+    lastAngle = angleAt(e);
+}
 
-    async function loadAudio(url) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        napis.textContent = "Fetching sound file...";
+function drag(e){
+    if (!isDragging) return;
 
-        try {
-            const response = await fetch(url);
-            const arrayBuffer = await response.arrayBuffer();
-            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            napis.textContent = "Audio ready. Spinning up...";
-            startAudioSource(currentBaseRate); 
-            startAutomaticRotation(getSelectedRpm());
-        } catch (error) {
-            console.error('Error loading audio:', error);
-            napis.textContent = `Error loading sound file. Check console: ${url}`;
-        }
-    }
+    const a = angleAt(e);
+    const delta = a - lastAngle;
+    lastAngle = a;
 
-    function startAudioSource(rate) {
-        if (audioSource) {
-            audioSource.stop();
-        }
-        audioSource = audioContext.createBufferSource();
-        audioSource.buffer = audioBuffer;
-        audioSource.loop = true;
-        audioSource.connect(audioContext.destination);
-        audioSource.playbackRate.value = rate;
-        audioSource.start(0);
-    }
+    currentRotation += delta;
+    vinyl.style.transform = `rotate(${currentRotation}deg)`;
 
-    function updateAudioRate(rate) {
-        if (audioSource) {
-            const finalRate = rate + currentPitchOffset;
-            audioSource.playbackRate.setTargetAtTime(finalRate, audioContext.currentTime, 0.01);
-        }
-    }
+    velocity = delta;       // vitesse instantanée
+    targetVelocity = delta; // reste dans ce sens jusqu’à relâchement
+}
 
-    function getSelectedRpm() {
-        const checkedKnob = document.querySelector('input[name="rpm-select"]:checked');
-        return checkedKnob ? checkedKnob.value : 'off';
-    }
+function stopDrag(){
+    if (!isDragging) return;
+    isDragging = false;
 
-    // --- RPM and Pitch Management ---
+    // retour à la vitesse RPM
+    const mode = document.querySelector('input[name="rpm"]:checked').value;
+    setRPM(mode);
+}
 
-    function stopAllRotation() {
-        // Arrête la rotation rAF
-        if (animationFrameId !== null) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-            lastTime = 0;
-        }
-        // Arrête la décélération après scratch
-        if (decelerationInterval !== null) {
-            clearInterval(decelerationInterval);
-            decelerationInterval = null;
-            rotationSpeed = 0;
-        }
-        
-        vinyl.style.transform = `rotate(${currentRotation}deg)`; 
+/* --------------------------------------------
+                PITCH SLIDER
+-------------------------------------------- */
 
-        if (audioSource) {
-            updateAudioRate(0);
-        }
-    }
+pitchSlider.addEventListener("input", ()=>{
+    pitchOffset = parseInt(pitchSlider.value)/100;
+    pitchValue.textContent = pitchSlider.value+"%";
+});
 
-    function startAutomaticRotation(rpm) {
-        stopAllRotation();
+/* --------------------------------------------
+                AUDIO LOADING
+-------------------------------------------- */
 
-        const currentRpm = rpm || getSelectedRpm();
+async function loadAudio(url){
+    audioContext = new AudioContext();
+    napis.textContent = "Loading audio…";
 
-        if (currentRpm === "33") {
-            currentBaseRate = BASE_RATE_33;
-            targetRatePerSecond = ROTATION_DEG_PER_SECOND_33;
-        } else if (currentRpm === "45") {
-            currentBaseRate = BASE_RATE_45;
-            targetRatePerSecond = ROTATION_DEG_PER_SECOND_45;
-        } else { // OFF
-            napis.textContent = "DJ Scratch Turntable (OFF)";
-            return;
-        }
+    const response = await fetch(url);
+    const data = await response.arrayBuffer();
+    audioBuffer = await audioContext.decodeAudioData(data);
 
-        napis.textContent = `Spinning at ${currentRpm} RPM. Drag to Scratch! Pitch: ${(currentPitchOffset * 100).toFixed(0)}%`;
+    napis.textContent = "Ready. Pick an RPM.";
 
-        if (audioBuffer) {
-            updateAudioRate(currentBaseRate);
-        }
-        
-        // Démarre la rotation fluide
-        animationFrameId = requestAnimationFrame(rotateDisc);
-    }
+    startAudio(BASE_RATE_33);
+}
 
-    function handlePitchChange(pitchValue) {
-        currentPitchOffset = pitchValue / 100;
-        pitchValueDisplay.textContent = `${pitchValue}%`;
+function startAudio(rate){
+    if (audioSource) audioSource.stop();
 
-        if (animationFrameId !== null || decelerationInterval !== null) {
-             updateAudioRate(currentBaseRate);
-        }
-    }
+    audioSource = audioContext.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    audioSource.loop = true;
+    audioSource.connect(audioContext.destination);
+    audioSource.playbackRate.value = rate;
+    audioSource.start(0);
+}
 
-    // --- Drag/Scratch Event Handlers ---
+/* --------------------------------------------
+                BUTTONS
+-------------------------------------------- */
 
-    function startTurn(e) {
-        if (getSelectedRpm() === "off") return;
-        e.preventDefault();
+document.getElementById("stop-button").onclick = ()=>{
+    document.getElementById("speed-off").checked = true;
+    setRPM("off");
+};
 
-        if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
+document.getElementById("zoom-button").onclick = ()=>{
+    turntable.classList.toggle("zoomed-view");
+    setTimeout(updateCenter, 300);
+};
 
-        // Arrêt des animations automatiques/décélération
-        if (animationFrameId !== null) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
-        if (decelerationInterval !== null) clearInterval(decelerationInterval);
-        decelerationInterval = null;
+/* --------------------------------------------
+            EVENTS
+-------------------------------------------- */
 
-        isDragging = true;
-        updateCenter();
+vinyl.addEventListener("mousedown", startDrag);
+vinyl.addEventListener("mousemove", drag);
+window.addEventListener("mouseup", stopDrag);
 
-        const eventX = e.clientX || e.touches[0].clientX;
-        const eventY = e.clientY || e.touches[0].clientY;
+vinyl.addEventListener("touchstart", startDrag);
+vinyl.addEventListener("touchmove", drag);
+vinyl.addEventListener("touchend", stopDrag);
 
-        const pointAngle = getAngle(eventX, eventY);
+window.addEventListener("resize", updateCenter);
 
-        startAngle = currentRotation - pointAngle;
-        lastRotation = currentRotation;
+window.addEventListener("load", ()=>{
+    updateCenter();
+    loadAudio("vinyl.mp3");
+});
 
-        window.addEventListener('mousemove', rotate);
-        window.addEventListener('mouseup', endTurn);
-        window.addEventListener('touchmove', rotate);
-        window.addEventListener('touchend', endTurn);
-
-        napis.textContent = "Scratching...";
-    }
-
-    function rotate(e) {
-        if (!isDragging) return;
-
-        const eventX = e.clientX || e.touches[0].clientX;
-        const eventY = e.clientY || e.touches[0].clientY;
-
-        const newAngle = getAngle(eventX, eventY);
-        let newRotation = startAngle + newAngle;
-
-        rotationSpeed = newRotation - lastRotation;
-        lastRotation = newRotation;
-
-        applyRotation(newRotation);
-
-        if (audioSource) {
-            const scratchRate = currentBaseRate + (rotationSpeed * SCRATCH_SENSITIVITY);
-            updateAudioRate(Math.max(0.1, scratchRate));
-        }
-    }
-
-    function endTurn() {
-        if (!isDragging) return;
-
-        isDragging = false;
-
-        window.removeEventListener('mousemove', rotate);
-        window.removeEventListener('mouseup', endTurn);
-        window.removeEventListener('touchmove', rotate);
-        window.removeEventListener('touchend', endTurn);
-
-        startDeceleration();
-    }
-
-    // Logique de stabilisation progressive
-    function startDeceleration() {
-        const decelerationRate = 0.995;
-        
-        const currentRpm = getSelectedRpm();
-        let targetRatePerSecondForDecel = 0;
-
-        if (currentRpm === "33") {
-            targetRatePerSecondForDecel = ROTATION_DEG_PER_SECOND_33;
-        } else if (currentRpm === "45") {
-            targetRatePerSecondForDecel = ROTATION_DEG_PER_SECOND_45;
-        }
-        
-        const intervalDelay = 5; // Utilise 5ms pour la décélération car elle n'est pas critique comme la rotation constante
-        const targetDegPerTick = targetRatePerSecondForDecel * (intervalDelay / 1000); 
-
-        if (decelerationInterval !== null) {
-            clearInterval(decelerationInterval);
-        }
-
-        napis.textContent = "Spinning back up...";
-
-        decelerationInterval = setInterval(() => {
-            
-            // 1. Mise à jour de la rotation du disque
-            currentRotation += rotationSpeed;
-            if (currentRotation >= 360) currentRotation -= 360; 
-            if (currentRotation < 0) currentRotation += 360; 
-            applyRotation(currentRotation);
-
-            // 2. Mise à jour du taux de lecture audio (Scratch)
-            if (audioSource) {
-                const scratchRate = currentBaseRate + (rotationSpeed * SCRATCH_SENSITIVITY);
-                updateAudioRate(Math.max(0.1, scratchRate));
-            }
-            
-            // 3. Logique de stabilisation de la vitesse (Retour doux)
-            if (currentRpm !== 'off') {
-                // Tendance : déplace rotationSpeed vers la cible
-                rotationSpeed = rotationSpeed * decelerationRate + (targetDegPerTick * (1 - decelerationRate));
-                
-                // Si la vitesse actuelle est proche de la cible, on passe à la rotation automatique (rAF)
-                if (Math.abs(rotationSpeed - targetDegPerTick) < 0.01) {
-                    clearInterval(decelerationInterval);
-                    decelerationInterval = null;
-                    rotationSpeed = 0; 
-                    startAutomaticRotation(currentRpm); 
-                    return;
-                }
-            } else {
-                // Si l'état est OFF, on décélère jusqu'à l'arrêt complet
-                 rotationSpeed *= decelerationRate;
-                 if (Math.abs(rotationSpeed) < 0.01) {
-                    clearInterval(decelerationInterval);
-                    decelerationInterval = null;
-                    rotationSpeed = 0;
-                    startAutomaticRotation('off');
-                    return;
-                }
-            }
-        }, intervalDelay);
-    }
-
-    // --- Initial Event Listeners ---
-    
-    speedKnobs.forEach(knob => {
-        knob.addEventListener('change', (e) => {
-            startAutomaticRotation(e.target.value);
-        });
-    });
-
-    stopButton.addEventListener('click', () => {
-        document.getElementById('speed-off').checked = true;
-        startAutomaticRotation('off');
-    });
-    
-    zoomButton.addEventListener('click', () => {
-        turntableContainer.classList.toggle('zoomed-view');
-        setTimeout(updateCenter, 300); 
-    });
-
-
-    pitchSlider.addEventListener('input', (e) => {
-        handlePitchChange(parseFloat(e.target.value));
-    });
-
-    vinyl.addEventListener('mousedown', startTurn);
-    vinyl.addEventListener('touchstart', startTurn);
-
-    const stopResumeHandler = (e) => {
-        e.preventDefault();
-        stopAllRotation();
-        startAutomaticRotation(getSelectedRpm());
-    };
-
-    vinyl.addEventListener('dblclick', stopResumeHandler);
-    vinyl.addEventListener('touchend', (e) => {
-        const now = new Date().getTime();
-        const lastTouchTime = vinyl.lastTouchTime || 0;
-        const delta = now - lastTouchTime;
-        const doubleTapThreshold = 300;
-
-        if (delta > 0 && delta < doubleTapThreshold) {
-            stopResumeHandler(e);
-        }
-        vinyl.lastTouchTime = now;
-    });
-
-    window.addEventListener('resize', updateCenter);
-    window.addEventListener('load', () => {
-        updateCenter();
-        loadAudio('vinyl.mp3'); 
-    });
-    </script>
+</script>
 </body>
 </html>

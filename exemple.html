@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    canvas { background: #333; display: block; margin: auto; }
+  </style>
+</head>
+<body>
+  <audio id="audio" src="ton_morceau.mp3" controls></audio>
+  <canvas id="canvas" width="400" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const audio = document.getElementById('audio');
+
+    const img = new Image();
+    img.src = 'vinyle.png'; // ton image de disque
+
+    let lastTime = 0;
+    let angle = 0;
+    let targetAngularSpeed = 0; // vitesse désirée (rad/s)
+    let currentAngularSpeed = 0;
+
+    const normalSpeed = 2 * Math.PI / 5; // exemple : un tour toutes les 5s
+
+    audio.addEventListener('play', () => {
+      targetAngularSpeed = normalSpeed;
+    });
+
+    audio.addEventListener('pause', () => {
+      targetAngularSpeed = 0;
+    });
+
+    // Sur scrubbing (changer manuellement currentTime)
+    audio.addEventListener('seeking', () => {
+      // quand l'utilisateur commence à seek
+      targetAngularSpeed = 0; // ralentir
+    });
+    audio.addEventListener('seeked', () => {
+      // une fois qu'il a fini de seek
+      targetAngularSpeed = normalSpeed; // reprendre la vitesse
+    });
+
+    function update(delta) {
+      // interpolation de la vitesse : plus fluide
+      const accel = 0.005; // coefficient d'accélération
+      if (currentAngularSpeed < targetAngularSpeed) {
+        currentAngularSpeed += accel;
+        if (currentAngularSpeed > targetAngularSpeed) currentAngularSpeed = targetAngularSpeed;
+      } else if (currentAngularSpeed > targetAngularSpeed) {
+        currentAngularSpeed -= accel;
+        if (currentAngularSpeed < targetAngularSpeed) currentAngularSpeed = targetAngularSpeed;
+      }
+
+      angle += currentAngularSpeed * delta;
+
+      // pour rester dans [0, 2π]
+      angle %= 2 * Math.PI;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(angle);
+      ctx.drawImage(img, -img.width/2, -img.height/2);
+      ctx.restore();
+    }
+
+    function loop(now) {
+      if (!lastTime) lastTime = now;
+      const delta = (now - lastTime) / 1000; // en secondes
+      lastTime = now;
+
+      update(delta);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    img.onload = () => {
+      requestAnimationFrame(loop);
+    };
+  </script>
+</body>
+</html>
+
