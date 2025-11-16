@@ -50,13 +50,12 @@
             justify-content: center;
             align-items: center;
             perspective: 1000px; 
-            /* Ajout de la transition pour un zoom fluide */
             transition: transform 0.3s ease-in-out; 
         }
 
-        /* NOUVEAU: Classe CSS pour le Zoom */
+        /* Classe CSS pour le Zoom */
         .zoomed-view {
-            transform: scale(1.3); /* Augmente la taille de 30% */
+            transform: scale(1.3); 
         }
 
         /* Vinyl Image (Platter) */
@@ -95,7 +94,6 @@
             pointer-events: auto;
         }
 
-        /* Le style du bouton de zoom est dans le HTML, mais il devrait être ici pour la propreté: */
         #zoom-button {
             position: absolute; 
             top: 20px; 
@@ -220,8 +218,8 @@
     <script>
     const vinyl = document.getElementById("vinyl");
     const napis = document.querySelector("h1");
-    const turntableContainer = document.getElementById("turntable-container"); // Nouvelle variable
-    const zoomButton = document.getElementById("zoom-button"); // Nouvelle variable
+    const turntableContainer = document.getElementById("turntable-container"); 
+    const zoomButton = document.getElementById("zoom-button"); 
 
     const stopButton = document.getElementById("stop-button");
     const speedKnobs = document.querySelectorAll('input[name="rpm-select"]');
@@ -235,7 +233,9 @@
     let center = { x: 0, y: 0 };
     let rotationSpeed = 0;
     let decelerationInterval = null; 
-    let rotationInterval = null; 
+    
+    let animationFrameId = null; // Gère la rotation rAF
+    let lastTime = 0; // Timestamp pour le calcul des frames
 
     // --- AUDIO VARIABLES & CONSTANTS ---
     let audioContext;
@@ -251,6 +251,7 @@
     // Vitesse de rotation en degrés/seconde
     const ROTATION_DEG_PER_SECOND_33 = 360 / 1.8; 
     const ROTATION_DEG_PER_SECOND_45 = 360 / 1.3; 
+    let targetRatePerSecond = 0; // Vitesse cible pour rAF
 
     // --- Utility Functions ---
     function getAngle(x, y) {
@@ -258,7 +259,6 @@
     }
 
     function updateCenter() {
-        // Le centre est calculé par rapport au conteneur, même s'il est zoomé
         const rect = turntableContainer.getBoundingClientRect(); 
         center.x = rect.left + rect.width / 2;
         center.y = rect.top + rect.height / 2;
@@ -269,22 +269,29 @@
         currentRotation = angle;
     }
 
-    // --- JS Rotation Engine ---
+    // --- JS Rotation Engine (MISE À JOUR rAF) ---
 
-    function startJSRotation(ratePerSecond) {
-        if (rotationInterval) {
-            clearInterval(rotationInterval);
+    function rotateDisc(timestamp) {
+        if (!lastTime) {
+            lastTime = timestamp;
         }
 
-        const intervalDelay = 10; 
-        const degPerTick = ratePerSecond * (intervalDelay / 1000);
+        const elapsed = timestamp - lastTime; 
+        lastTime = timestamp;
 
-        rotationInterval = setInterval(() => {
-            currentRotation += degPerTick;
-            if (currentRotation >= 360) currentRotation -= 360; 
-            if (currentRotation < 0) currentRotation += 360; 
-            applyRotation(currentRotation);
-        }, intervalDelay);
+        // Calcul du déplacement en degrés basé sur le temps écoulé (pour fluidité)
+        const degPerMillisecond = targetRatePerSecond / 1000;
+        const degToAdd = degPerMillisecond * elapsed;
+        
+        currentRotation += degToAdd;
+
+        if (currentRotation >= 360) currentRotation -= 360; 
+        if (currentRotation < 0) currentRotation += 360; 
+        
+        applyRotation(currentRotation);
+
+        // Continue la boucle
+        animationFrameId = requestAnimationFrame(rotateDisc);
     }
 
 
@@ -334,10 +341,13 @@
     // --- RPM and Pitch Management ---
 
     function stopAllRotation() {
-        if (rotationInterval !== null) {
-            clearInterval(rotationInterval);
-            rotationInterval = null;
+        // Arrête la rotation rAF
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            lastTime = 0;
         }
+        // Arrête la décélération après scratch
         if (decelerationInterval !== null) {
             clearInterval(decelerationInterval);
             decelerationInterval = null;
@@ -358,10 +368,10 @@
 
         if (currentRpm === "33") {
             currentBaseRate = BASE_RATE_33;
-            startJSRotation(ROTATION_DEG_PER_SECOND_33); 
+            targetRatePerSecond = ROTATION_DEG_PER_SECOND_33;
         } else if (currentRpm === "45") {
             currentBaseRate = BASE_RATE_45;
-            startJSRotation(ROTATION_DEG_PER_SECOND_45); 
+            targetRatePerSecond = ROTATION_DEG_PER_SECOND_45;
         } else { // OFF
             napis.textContent = "DJ Scratch Turntable (OFF)";
             return;
@@ -372,13 +382,16 @@
         if (audioBuffer) {
             updateAudioRate(currentBaseRate);
         }
+        
+        // Démarre la rotation fluide
+        animationFrameId = requestAnimationFrame(rotateDisc);
     }
 
     function handlePitchChange(pitchValue) {
         currentPitchOffset = pitchValue / 100;
         pitchValueDisplay.textContent = `${pitchValue}%`;
 
-        if (rotationInterval !== null || decelerationInterval !== null) {
+        if (animationFrameId !== null || decelerationInterval !== null) {
              updateAudioRate(currentBaseRate);
         }
     }
@@ -394,8 +407,10 @@
         }
 
         // Arrêt des animations automatiques/décélération
-        if (rotationInterval !== null) clearInterval(rotationInterval);
-        rotationInterval = null;
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
         if (decelerationInterval !== null) clearInterval(decelerationInterval);
         decelerationInterval = null;
 
@@ -448,25 +463,24 @@
         window.removeEventListener('touchmove', rotate);
         window.removeEventListener('touchend', endTurn);
 
-        // NOUVEAU: Toujours appeler startDeceleration pour un retour progressif
         startDeceleration();
     }
 
-    // NOUVEAU: Logique de stabilisation progressive
+    // Logique de stabilisation progressive
     function startDeceleration() {
         const decelerationRate = 0.995;
         
         const currentRpm = getSelectedRpm();
-        let targetRatePerSecond = 0;
+        let targetRatePerSecondForDecel = 0;
 
         if (currentRpm === "33") {
-            targetRatePerSecond = ROTATION_DEG_PER_SECOND_33;
+            targetRatePerSecondForDecel = ROTATION_DEG_PER_SECOND_33;
         } else if (currentRpm === "45") {
-            targetRatePerSecond = ROTATION_DEG_PER_SECOND_45;
+            targetRatePerSecondForDecel = ROTATION_DEG_PER_SECOND_45;
         }
         
-        const intervalDelay = 10;
-        const targetDegPerTick = targetRatePerSecond * (intervalDelay / 1000); 
+        const intervalDelay = 5; // Utilise 5ms pour la décélération car elle n'est pas critique comme la rotation constante
+        const targetDegPerTick = targetRatePerSecondForDecel * (intervalDelay / 1000); 
 
         if (decelerationInterval !== null) {
             clearInterval(decelerationInterval);
@@ -493,12 +507,12 @@
                 // Tendance : déplace rotationSpeed vers la cible
                 rotationSpeed = rotationSpeed * decelerationRate + (targetDegPerTick * (1 - decelerationRate));
                 
-                // Si la vitesse actuelle est proche de la cible, on passe à la rotation automatique
+                // Si la vitesse actuelle est proche de la cible, on passe à la rotation automatique (rAF)
                 if (Math.abs(rotationSpeed - targetDegPerTick) < 0.01) {
                     clearInterval(decelerationInterval);
                     decelerationInterval = null;
                     rotationSpeed = 0; 
-                    startAutomaticRotation(currentRpm); // Relance le moteur JS propre
+                    startAutomaticRotation(currentRpm); 
                     return;
                 }
             } else {
@@ -528,10 +542,8 @@
         startAutomaticRotation('off');
     });
     
-    // NOUVEAU: Listener pour le bouton de zoom
     zoomButton.addEventListener('click', () => {
         turntableContainer.classList.toggle('zoomed-view');
-        // Mise à jour du centre après un petit délai pour permettre la transition CSS
         setTimeout(updateCenter, 300); 
     });
 
