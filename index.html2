@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Turntable Fluide</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #333;
+            margin: 0;
+            font-family: sans-serif;
+        }
+
+        /* Conteneur de la platine */
+        .turntable-container {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            cursor: pointer;
+            touch-action: manipulation; /* Optimisation pour le double-tap */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Le plateau (platter) qui va tourner */
+        #platter {
+            width: 90%;
+            height: 90%;
+            border-radius: 50%;
+            background-color: #222; /* Couleur du vinyle */
+            border: 5px solid #000;
+            /* Utilisation de transform pour la rotation GPU-accélérée */
+            transform: rotate(0deg);
+            transform-origin: center;
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        /* Trou central et étiquette */
+        #platter::after {
+            content: 'Double Tap / Click to Start';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
+            text-align: center;
+            font-size: 10px;
+            color: #fff;
+            border-radius: 50%;
+            background-color: red;
+            border: 5px solid white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="turntable-container">
+        <div id="platter"></div>
+    </div>
+
+    <audio id="audioPlayer" src="vinyl.mp3" preload="auto"></audio>
+    <script>
+        // --- Variables de Configuration ---
+        const TARGET_RPM = 33.33; // Vitesse cible (33 tours/minute)
+        const ACCELERATION_RATE = 0.8; // Taux d'accélération (plus petit = plus lent)
+        const MAX_PITCH = 1.0; // Vitesse de lecture audio normale
+        const MIN_PITCH = 0.5; // Vitesse de lecture audio minimale lors de l'arrêt
+        const DOUBLE_TOUCH_THRESHOLD = 350; // Millisecondes pour le double-tap/clic
+        
+        // --- Variables d'État ---
+        let targetRPM = 0;      // Vitesse désirée (0 ou 33.33)
+        let currentRPM = 0;     // Vitesse actuelle utilisée pour l'animation
+        let currentAngle = 0;   // Angle actuel de rotation
+        let lastTime = 0;       // Timestamp de la dernière trame
+        let lastTouchTime = 0;  // Timestamp du dernier clic/tap
+
+        // --- Éléments du DOM ---
+        const platter = document.getElementById('platter');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const turntableContainer = document.querySelector('.turntable-container');
+
+        // --- Logique d'Animation et de Vitesse ---
+
+        /**
+         * La boucle principale d'animation, appelée par requestAnimationFrame.
+         * @param {number} timestamp - Le temps écoulé depuis le début de la page (en ms).
+         */
+        function animate(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = timestamp - lastTime; 
+            lastTime = timestamp;
+
+            // 1. Accélération/Décélération du RPM (la "fluidité")
+            const deltaRPM = targetRPM - currentRPM;
+
+            if (Math.abs(deltaRPM) > 0.01) {
+                // Convergence progressive vers targetRPM
+                currentRPM += deltaRPM * (ACCELERATION_RATE * (deltaTime / 1000));
+            } else if (targetRPM === 0) {
+                currentRPM = 0; // Arrêt final
+            }
+
+            // 2. Mise à jour de la Rotation
+            // Calcul : (tours/minute) / 60 * 360 = degrés/seconde
+            const degreesPerMs = (currentRPM / 60) * 360 / 1000;
+            currentAngle += degreesPerMs * deltaTime;
+            
+            platter.style.transform = `rotate(${currentAngle}deg)`;
+
+            // 3. Mise à jour du Pitch Audio (Effet de Ralentissement/Accélération du Son)
+            if (audioPlayer.src) {
+                // Calcule le pitch en fonction du RPM actuel
+                const pitchRatio = currentRPM / TARGET_RPM;
+                const newPitch = Math.max(MIN_PITCH, pitchRatio * (MAX_PITCH - MIN_PITCH) + MIN_PITCH);
+                audioPlayer.playbackRate = newPitch;
+                
+                // Gestion de la lecture/pause
+                if (currentRPM > 0.1 && audioPlayer.paused) {
+                    audioPlayer.play().catch(e => console.log("La lecture a échoué (interaction utilisateur nécessaire)"));
+                } else if (currentRPM === 0 && !audioPlayer.paused) {
+                    audioPlayer.pause();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // --- Logique de Contrôle (Double Tap/Clic) ---
+
+        function togglePlayback() {
+            if (targetRPM > 0) {
+                // Stopper la platine (décélération progressive)
+                targetRPM = 0; 
+            } else {
+                // Démarrer la platine (accélération progressive)
+                targetRPM = TARGET_RPM;
+            }
+        }
+
+        turntableContainer.addEventListener('mousedown', handleClickOrTouch);
+        turntableContainer.addEventListener('touchstart', handleClickOrTouch);
+
+
+        function handleClickOrTouch(e) {
+            e.preventDefault(); 
+
+            const currentTime = new Date().getTime();
+            const timeDiff = currentTime - lastTouchTime;
+
+            // Détection du double-tap/clic
+            if (timeDiff < DOUBLE_TOUCH_THRESHOLD && timeDiff > 0) {
+                togglePlayback();
+                lastTouchTime = 0; 
+            } else {
+                lastTouchTime = currentTime;
+            }
+        }
+        
+        // --- Démarrage de l'Animation ---
+        requestAnimationFrame(animate); 
+
+    </script>
+</body>
+</html>

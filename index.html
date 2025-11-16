@@ -1,175 +1,205 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Turntable Fluide</title>
+    <title>Turntable with Advanced Controls</title>
+    <link rel="icon" href="data:,">
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #333;
+        /* Base Styles (Same as before) */
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* Conteneur de la platine */
-        .turntable-container {
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background-color: #111;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            position: relative;
-            cursor: pointer;
-            touch-action: manipulation; /* Optimisation pour le double-tap */
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #333;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
-        /* Le plateau (platter) qui va tourner */
-        #platter {
-            width: 90%;
-            height: 90%;
+        h1 {
             position: absolute;
             top: 5%;
-            left: 5%;
-            border-radius: 50%;
-            background-color: #222; /* Couleur du vinyle */
-            border: 5px solid #000;
-            /* Utilisation de transform pour la rotation GPU-accélérée */
-            transform: rotate(0deg);
-            transform-origin: center;
-            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
-            transition: transform 0.05s linear; /* Transition très courte pour lisser */
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 30px;
+            transition: all 0.5s;
         }
 
-        /* Trou central */
-        #platter::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background-color: red;
-            border: 2px solid white;
+        /* Turntable Container (Responsive) */
+        #turntable-container {
+            position: relative;
+            width: 80vw;
+            height: 80vw;
+            max-width: 700px;
+            max-height: 700px;
+            background-color: #a08c78; /* Simulating the turntable base */
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            display: flex; 
+            justify-content: center;
+            align-items: center;
         }
+
+        /* Vinyl Image (Platter) */
+        #vinyl {
+            display: block;
+            width: 90%; /* Sizing relative to the container */
+            height: 90%;
+            border-radius: 50%; 
+            cursor: grab;
+            transform: rotate(0deg); 
+            transition: 0.05s linear;
+            position: absolute; 
+            top: 5%; left: 5%;
+        }
+
+        /* --- CONTROL LAYOUT --- */
+
+        #controls-wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Allows clicks to pass through to the vinyl */
+        }
+        
+        #stop-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #c0392b; /* Red button */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 20;
+            pointer-events: auto; /* Re-enable clicks for the button */
+        }
+        
+        #speed-control {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            z-index: 20;
+            color: #222;
+            font-size: 14px;
+        }
+        
+        #pitch-control {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            pointer-events: auto;
+            z-index: 20;
+            color: #222;
+            font-size: 14px;
+        }
+
+        /* --- SPEED KNOB STYLING (Radio Buttons) --- */
+        .knob-container {
+            display: flex;
+            margin: 0 10px;
+            background: #222;
+            padding: 5px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+        }
+        
+        .knob-container input {
+            display: none;
+        }
+        
+        .knob-container label {
+            background-color: #555;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            margin: 0 2px;
+            pointer-events: auto;
+        }
+
+        .knob-container input:checked + label {
+            background-color: #1abc9c; /* Selected color */
+            font-weight: bold;
+        }
+
+        /* --- PITCH SLIDER STYLING --- */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 150px;
+            height: 10px;
+            background: #ccc;
+            border-radius: 5px;
+            margin-left: 10px;
+            pointer-events: auto;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 10px;
+            border-radius: 3px;
+            background: #2c3e50;
+            cursor: pointer;
+            box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+        }
+        
+        /* --- Rotation Animations (Same as before) --- */
+        @keyframes spin-33 { /* ... */ }
+        @keyframes spin-45 { /* ... */ }
+        .spin-33 { animation: spin-33 1.8s linear infinite; }
+        .spin-45 { animation: spin-45 1.3s linear infinite; }
     </style>
 </head>
-<body>
 
-    <div class="turntable-container">
-        <div id="platter"></div>
+<body>
+    <h1>Loading Audio... Please click the screen to resume audio on mobile.</h1>
+    
+    <div id="turntable-container">
+        
+        <img id="vinyl" src="img/DISC.png" alt="Platine Vinyle">
+        
+        <div id="controls-wrapper">
+            <button id="stop-button">STOP</button>
+
+            <div id="speed-control">
+                <label>SPEED:</label>
+                <div class="knob-container">
+                    <input type="radio" id="speed-45" name="rpm-select" value="45">
+                    <label for="speed-45">45</label>
+
+                    <input type="radio" id="speed-off" name="rpm-select" value="off" checked>
+                    <label for="speed-off">OFF</label>
+
+                    <input type="radio" id="speed-33" name="rpm-select" value="33">
+                    <label for="speed-33">33</label>
+                </div>
+            </div>
+
+            <div id="pitch-control">
+                <label>PITCH:</label>
+                <input type="range" id="pitch-slider" min="-10" max="10" value="0">
+                <span id="pitch-value">0%</span>
+            </div>
+        </div>
     </div>
 
-    <audio id="audioPlayer" src="votre_musique.mp3" preload="auto"></audio>
-    <script>
-        // --- Variables de Configuration ---
-        const TARGET_RPM = 33.33; // Vitesse cible (33 tours/minute)
-        const ACCELERATION_RATE = 0.8; // Taux d'accélération (plus petit = plus lent à atteindre la cible)
-        const MAX_PITCH = 1.0; // Vitesse de lecture audio normale
-        const MIN_PITCH = 0.5; // Vitesse de lecture audio minimale lors de l'arrêt
-        const DOUBLE_TOUCH_THRESHOLD = 350; // Millisecondes pour le double-tap/clic
-        
-        // --- Variables d'État ---
-        let targetRPM = 0;      // La vitesse de rotation que nous Voulons atteindre (0 ou 33.33)
-        let currentRPM = 0;     // La vitesse de rotation Actuelle (celle utilisée pour l'animation)
-        let currentAngle = 0;   // L'angle actuel de rotation
-        let lastTime = 0;       // Timestamp de la dernière trame
-        let lastTouchTime = 0;  // Timestamp du dernier clic/tap
-
-        // --- Éléments du DOM ---
-        const platter = document.getElementById('platter');
-        const audioPlayer = document.getElementById('audioPlayer');
-        const turntableContainer = document.querySelector('.turntable-container');
-
-        // --- Logique d'Animation et de Vitesse ---
-
-        /**
-         * La boucle principale d'animation, appelée par requestAnimationFrame.
-         * @param {number} timestamp - Le temps écoulé depuis le début de la page (en ms).
-         */
-        function animate(timestamp) {
-            if (!lastTime) lastTime = timestamp;
-            const deltaTime = timestamp - lastTime; // Temps écoulé depuis la dernière trame (en ms)
-            lastTime = timestamp;
-
-            // 1. Accélération/Décélération du RPM (la "fluidité")
-            const deltaRPM = targetRPM - currentRPM;
-
-            if (Math.abs(deltaRPM) > 0.01) {
-                // Fait converger currentRPM vers targetRPM progressivement
-                currentRPM += deltaRPM * (ACCELERATION_RATE * (deltaTime / 1000));
-            } else if (targetRPM === 0) {
-                currentRPM = 0; // S'assurer qu'il s'arrête net à la fin de la décélération
-            }
-
-            // 2. Mise à jour de la Rotation
-            // Calcul : (tours/minute) / 60 * 360 = degrés/seconde
-            const degreesPerMs = (currentRPM / 60) * 360 / 1000;
-            currentAngle += degreesPerMs * deltaTime;
-            
-            platter.style.transform = `rotate(${currentAngle}deg)`;
-
-            // 3. Mise à jour du Pitch Audio (Effet de Ralentissement/Accélération du Son)
-            if (audioPlayer.src) { // S'assurer qu'une source audio est définie
-                // Normalise le RPM actuel entre 0 et TARGET_RPM pour obtenir un pitch entre MIN_PITCH et MAX_PITCH
-                const pitchRatio = currentRPM / TARGET_RPM;
-                const newPitch = Math.max(MIN_PITCH, pitchRatio * (MAX_PITCH - MIN_PITCH) + MIN_PITCH);
-                audioPlayer.playbackRate = newPitch;
-                
-                // Gestion de la lecture/pause
-                if (currentRPM > 0.1 && audioPlayer.paused) {
-                    audioPlayer.play().catch(e => console.log("La lecture a échoué (interaction utilisateur nécessaire)"));
-                } else if (currentRPM === 0 && !audioPlayer.paused) {
-                    audioPlayer.pause();
-                }
-            }
-
-            requestAnimationFrame(animate);
-        }
-
-        // --- Logique de Contrôle (Double Tap/Clic) ---
-
-        function togglePlayback() {
-            if (targetRPM > 0) {
-                // Stopper la platine (décélération)
-                targetRPM = 0; 
-                console.log("STOP : Décélération...");
-            } else {
-                // Démarrer la platine (accélération)
-                targetRPM = TARGET_RPM;
-                console.log("PLAY : Accélération...");
-            }
-        }
-
-        turntableContainer.addEventListener('mousedown', handleClickOrTouch);
-        turntableContainer.addEventListener('touchstart', handleClickOrTouch);
-
-
-        function handleClickOrTouch(e) {
-            e.preventDefault(); // Empêcher le comportement par défaut (ex: zoom)
-
-            const currentTime = new Date().getTime();
-            const timeDiff = currentTime - lastTouchTime;
-
-            // Détecte si la différence de temps est dans la plage de double-tap
-            if (timeDiff < DOUBLE_TOUCH_THRESHOLD && timeDiff > 0) {
-                togglePlayback();
-                lastTouchTime = 0; // Réinitialiser pour éviter un triple-tap
-            } else {
-                lastTouchTime = currentTime;
-            }
-        }
-        
-        // --- Démarrage ---
-        
-        // Si l'audio a déjà chargé, on peut démarrer l'animation.
-        // On démarre l'animation, même si la vitesse cible est 0.
-        // L'utilisateur doit cliquer une première fois pour que l'audio puisse jouer.
-        requestAnimationFrame(animate); 
-
-    </script>
-</body>
+    </body>
 </html>
