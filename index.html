@@ -33,6 +33,7 @@
             position: relative;
             width: 80vw; height: 80vw;
             max-width: 700px; max-height: 700px;
+            aspect-ratio: 1 / 1;
             background-color: #a08c78;
             border-radius: 10px;
             display: flex;
@@ -48,6 +49,9 @@
         #vinyl {
             width: 90%;
             height: 90%;
+            border-radius: 50%;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
             border-radius: 50%;
             position: absolute;
             cursor: grab;
@@ -140,13 +144,9 @@
 <body>
 
 <h1>Loading Audio… tap to enable audio on mobile.</h1>
-
 <div id="turntable-container">
-
     <img id="vinyl" src="img/DISC.png">
-
     <div id="controls-wrapper">
-
         <button id="stop-button">STOP</button>
         <button id="zoom-button">ZOOM</button>
 
