@@ -1,389 +1,175 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Turntable with RPM Selector and Sound</title>
-    <link rel="icon" href="data:,">
+    <title>Turntable Fluide</title>
     <style>
-        /* Base Styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             background-color: #333;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
+            margin: 0;
         }
 
-        h1 {
+        /* Conteneur de la platine */
+        .turntable-container {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            cursor: pointer;
+            touch-action: manipulation; /* Optimisation pour le double-tap */
+        }
+
+        /* Le plateau (platter) qui va tourner */
+        #platter {
+            width: 90%;
+            height: 90%;
             position: absolute;
             top: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 30px;
-            transition: all 0.5s;
-        }
-
-        /* Turntable Base (Responsive Width) */
-        #turntable-base {
-            position: relative;
-            width: 80vw; /* 80% of viewport width */
-            height: 80vw;
-            max-width: 700px; /* Optional: cap maximum size */
-            max-height: 700px;
-            background-color: #a08c78;
-            border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* RPM Selector Placement */
-        #control-area {
-            position: absolute;
-            bottom: 50px;
-            left: 50px;
-            text-align: center;
-            color: #222;
-        }
-
-        #speed-selector {
-            padding: 5px;
-            font-size: 16px;
-            margin-top: 5px;
-            background-color: #222;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        
-        /* Vinyl Image (Responsive Width) */
-        img {
-            display: block;
-            width: 75vw; /* Slightly smaller than base */
-            height: 75vw;
-            max-width: 600px; /* Optional: cap maximum size */
-            max-height: 600px;
+            left: 5%;
             border-radius: 50%;
-            cursor: grab;
-            transform: rotate(0deg); 
-            transition: 0.05s linear;
-        }
-        
-        /* --- CSS Rotation Animations --- */
-        @keyframes spin-33 {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            background-color: #222; /* Couleur du vinyle */
+            border: 5px solid #000;
+            /* Utilisation de transform pour la rotation GPU-accélérée */
+            transform: rotate(0deg);
+            transform-origin: center;
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
+            transition: transform 0.05s linear; /* Transition très courte pour lisser */
         }
 
-        @keyframes spin-45 {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .spin-33 {
-            animation: spin-33 1.8s linear infinite; /* Slower spin */
-        }
-
-        .spin-45 {
-            animation: spin-45 1.3s linear infinite; /* Faster spin */
+        /* Trou central */
+        #platter::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: red;
+            border: 2px solid white;
         }
     </style>
 </head>
-
 <body>
-    <h1>Loading Audio... Please click the screen to resume audio on mobile.</h1>
-    
-    <div id="turntable-base">
-        <div id="control-area">
-            <label for="speed-selector">Speed</label>
-            <select id="speed-selector">
-                <option value="off">OFF</option>
-                <option value="33" selected>33</option>
-                <option value="45">45</option>
-            </select>
-        </div>
-        
-        <img id="vinyl" src="img/DISC.png" alt="Disque">
+
+    <div class="turntable-container">
+        <div id="platter"></div>
     </div>
 
+    <audio id="audioPlayer" src="votre_musique.mp3" preload="auto"></audio>
     <script>
-        const vinyl = document.getElementById("vinyl");
-        const napis = document.querySelector("h1");
-        const selector = document.getElementById("speed-selector");
-
-        let isDragging = false;
-        let startAngle = 0;
-        let currentRotation = 0;
-        let lastRotation = 0;
-        let center = { x: 0, y: 0 };
-        let rotationSpeed = 0;
-        let decelerationInterval; 
-
-        // --- AUDIO VARIABLES & CONSTANTS ---
-        let audioContext;
-        let audioBuffer;
-        let audioSource;
-
-        // Tune these values for sensitivity and default speed
-        const SCRATCH_SENSITIVITY = 0.05; // How much drag speed affects pitch
-        const BASE_RATE_33 = 0.9; // Playback rate for 33 RPM
-        const BASE_RATE_45 = 1.2; // Playback rate for 45 RPM
-        let currentBaseRate = BASE_RATE_33; 
-
-        // --- Utility Functions ---
-        function getAngle(x, y) {
-            return Math.atan2(y - center.y, x - center.x) * (180 / Math.PI);
-        }
+        // --- Variables de Configuration ---
+        const TARGET_RPM = 33.33; // Vitesse cible (33 tours/minute)
+        const ACCELERATION_RATE = 0.8; // Taux d'accélération (plus petit = plus lent à atteindre la cible)
+        const MAX_PITCH = 1.0; // Vitesse de lecture audio normale
+        const MIN_PITCH = 0.5; // Vitesse de lecture audio minimale lors de l'arrêt
+        const DOUBLE_TOUCH_THRESHOLD = 350; // Millisecondes pour le double-tap/clic
         
-        function updateCenter() {
-            const base = document.getElementById('turntable-base');
-            const rect = base.getBoundingClientRect();
-            center.x = rect.left + rect.width / 2;
-            center.y = rect.top + rect.height / 2;
-        }
+        // --- Variables d'État ---
+        let targetRPM = 0;      // La vitesse de rotation que nous Voulons atteindre (0 ou 33.33)
+        let currentRPM = 0;     // La vitesse de rotation Actuelle (celle utilisée pour l'animation)
+        let currentAngle = 0;   // L'angle actuel de rotation
+        let lastTime = 0;       // Timestamp de la dernière trame
+        let lastTouchTime = 0;  // Timestamp du dernier clic/tap
 
-        function applyRotation(angle) {
-            vinyl.style.transform = `rotate(${angle}deg)`;
-            currentRotation = angle;
-        }
-        
-        // --- AUDIO FUNCTIONS ---
+        // --- Éléments du DOM ---
+        const platter = document.getElementById('platter');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const turntableContainer = document.querySelector('.turntable-container');
 
-        async function loadAudio(url) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            napis.textContent = "Fetching sound file...";
+        // --- Logique d'Animation et de Vitesse ---
 
-            try {
-                const response = await fetch(url);
-                const arrayBuffer = await response.arrayBuffer();
-                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                napis.textContent = "Audio ready. Spinning up...";
-                // Start the audio source but set its rate to the current RPM rate
-                startAudioSource(currentBaseRate); 
-            } catch (error) {
-                console.error('Error loading audio:', error);
-                napis.textContent = "Error loading sound file. Check console.";
-            }
-        }
-        
-        function startAudioSource(rate) {
-            if (audioSource) {
-                audioSource.stop();
+        /**
+         * La boucle principale d'animation, appelée par requestAnimationFrame.
+         * @param {number} timestamp - Le temps écoulé depuis le début de la page (en ms).
+         */
+        function animate(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = timestamp - lastTime; // Temps écoulé depuis la dernière trame (en ms)
+            lastTime = timestamp;
+
+            // 1. Accélération/Décélération du RPM (la "fluidité")
+            const deltaRPM = targetRPM - currentRPM;
+
+            if (Math.abs(deltaRPM) > 0.01) {
+                // Fait converger currentRPM vers targetRPM progressivement
+                currentRPM += deltaRPM * (ACCELERATION_RATE * (deltaTime / 1000));
+            } else if (targetRPM === 0) {
+                currentRPM = 0; // S'assurer qu'il s'arrête net à la fin de la décélération
             }
 
-            audioSource = audioContext.createBufferSource();
-            audioSource.buffer = audioBuffer;
-            audioSource.loop = true; 
-            audioSource.connect(audioContext.destination);
-            audioSource.playbackRate.value = rate;
+            // 2. Mise à jour de la Rotation
+            // Calcul : (tours/minute) / 60 * 360 = degrés/seconde
+            const degreesPerMs = (currentRPM / 60) * 360 / 1000;
+            currentAngle += degreesPerMs * deltaTime;
+            
+            platter.style.transform = `rotate(${currentAngle}deg)`;
 
-            audioSource.start(0); 
+            // 3. Mise à jour du Pitch Audio (Effet de Ralentissement/Accélération du Son)
+            if (audioPlayer.src) { // S'assurer qu'une source audio est définie
+                // Normalise le RPM actuel entre 0 et TARGET_RPM pour obtenir un pitch entre MIN_PITCH et MAX_PITCH
+                const pitchRatio = currentRPM / TARGET_RPM;
+                const newPitch = Math.max(MIN_PITCH, pitchRatio * (MAX_PITCH - MIN_PITCH) + MIN_PITCH);
+                audioPlayer.playbackRate = newPitch;
+                
+                // Gestion de la lecture/pause
+                if (currentRPM > 0.1 && audioPlayer.paused) {
+                    audioPlayer.play().catch(e => console.log("La lecture a échoué (interaction utilisateur nécessaire)"));
+                } else if (currentRPM === 0 && !audioPlayer.paused) {
+                    audioPlayer.pause();
+                }
+            }
+
+            requestAnimationFrame(animate);
         }
 
-        function updateAudioRate(rate) {
-            if (audioSource) {
-                // Smooth transition for rate change (0.01 seconds)
-                audioSource.playbackRate.setTargetAtTime(rate, audioContext.currentTime, 0.01); 
-            }
-        }
+        // --- Logique de Contrôle (Double Tap/Clic) ---
 
-        // --- RPM Management Functions ---
-        
-        function stopAllRotation() {
-            // 1. Stop CSS Animation
-            vinyl.classList.remove('spin-33', 'spin-45');
-            // 2. Clear any scratch deceleration
-            if (decelerationInterval) {
-                clearInterval(decelerationInterval);
-                rotationSpeed = 0;
-            }
-            vinyl.style.transform = ''; 
-
-            // 3. Stop sound
-            if (audioSource) {
-                updateAudioRate(0); // Playback rate of 0 stops the sound
-            }
-        }
-
-        function startAutomaticRotation(rpm) {
-            stopAllRotation(); 
-            currentBaseRate = (rpm === "33") ? BASE_RATE_33 : BASE_RATE_45;
-
-            if (rpm === "off") {
-                napis.textContent = "DJ Scratch Turntable (OFF)";
-                return;
-            }
-
-            // Vinyl rotation (CSS)
-            vinyl.classList.add(`spin-${rpm}`);
-            napis.textContent = `Spinning at ${rpm} RPM. Drag to Scratch!`;
-            
-            // Audio playback
-            if (audioBuffer) {
-                updateAudioRate(currentBaseRate);
-            }
-        }
-        
-        // --- Drag/Scratch Event Handlers ---
-        
-        function startTurn(e) {
-            if (selector.value === "off") return;
-            
-            e.preventDefault();
-            
-            // For mobile compatibility, ensure context is not suspended
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-            
-            vinyl.classList.remove('spin-33', 'spin-45');
-            if (decelerationInterval) clearInterval(decelerationInterval); 
-
-            // Logic to get current rotation angle from CSS transform (for seamless transition)
-            const style = window.getComputedStyle(vinyl);
-            const transformMatrix = style.getPropertyValue('transform');
-            let rotationDeg = 0;
-            if (transformMatrix && transformMatrix !== 'none') {
-                const values = transformMatrix.split('(')[1].split(')')[0].split(',');
-                const a = values[0];
-                const b = values[1];
-                rotationDeg = Math.round(Math.atan2(b, a) * (180/Math.PI));
-            } 
-            currentRotation = rotationDeg;
-            
-            isDragging = true;
-            updateCenter();
-
-            const eventX = e.clientX || e.touches[0].clientX;
-            const eventY = e.clientY || e.touches[0].clientY;
-            
-            const pointAngle = getAngle(eventX, eventY);
-            
-            startAngle = currentRotation - pointAngle;
-            lastRotation = currentRotation; 
-
-            window.addEventListener('mousemove', rotate);
-            window.addEventListener('mouseup', endTurn);
-            window.addEventListener('touchmove', rotate);
-            window.addEventListener('touchend', endTurn);
-            
-            napis.textContent = "Scratching...";
-        }
-
-        function rotate(e) {
-            if (!isDragging) return;
-
-            const eventX = e.clientX || e.touches[0].clientX;
-            const eventY = e.clientY || e.touches[0].clientY;
-            
-            const newAngle = getAngle(eventX, eventY);
-            let newRotation = startAngle + newAngle;
-
-            rotationSpeed = newRotation - lastRotation;
-            lastRotation = newRotation; 
-            
-            applyRotation(newRotation);
-
-            // Update audio playback rate dynamically for scratch sound
-            if (audioSource) {
-                const scratchRate = currentBaseRate + (rotationSpeed * SCRATCH_SENSITIVITY);
-                // Ensure rate doesn't go too low or too high (clamping)
-                updateAudioRate(Math.max(0.1, Math.min(3.0, scratchRate))); 
-            }
-        }
-
-        function endTurn() {
-            if (!isDragging) return;
-
-            isDragging = false;
-            
-            window.removeEventListener('mousemove', rotate);
-            window.removeEventListener('mouseup', endTurn);
-            window.removeEventListener('touchmove', rotate);
-            window.removeEventListener('touchend', endTurn);
-            
-            if (Math.abs(rotationSpeed) > 0.1) { 
-                startDeceleration();
+        function togglePlayback() {
+            if (targetRPM > 0) {
+                // Stopper la platine (décélération)
+                targetRPM = 0; 
+                console.log("STOP : Décélération...");
             } else {
-                startAutomaticRotation(selector.value);
+                // Démarrer la platine (accélération)
+                targetRPM = TARGET_RPM;
+                console.log("PLAY : Accélération...");
             }
         }
 
-        function startDeceleration() {
-            const decelerationRate = 0.995; 
-            vinyl.style.transition = '0s';
+        turntableContainer.addEventListener('mousedown', handleClickOrTouch);
+        turntableContainer.addEventListener('touchstart', handleClickOrTouch);
 
-            decelerationInterval = setInterval(() => {
-                currentRotation += rotationSpeed; 
-                applyRotation(currentRotation);
 
-                rotationSpeed *= decelerationRate; 
+        function handleClickOrTouch(e) {
+            e.preventDefault(); // Empêcher le comportement par défaut (ex: zoom)
 
-                // Update audio rate during deceleration
-                if (audioSource) {
-                    const scratchRate = currentBaseRate + (rotationSpeed * SCRATCH_SENSITIVITY);
-                    updateAudioRate(Math.max(0.1, Math.min(3.0, scratchRate)));
-                }
+            const currentTime = new Date().getTime();
+            const timeDiff = currentTime - lastTouchTime;
 
-                if (Math.abs(rotationSpeed) < 0.01) { 
-                    clearInterval(decelerationInterval);
-                    // After coasting stops, resume normal RPM
-                    startAutomaticRotation(selector.value); 
-                }
-            }, 5); 
+            // Détecte si la différence de temps est dans la plage de double-tap
+            if (timeDiff < DOUBLE_TOUCH_THRESHOLD && timeDiff > 0) {
+                togglePlayback();
+                lastTouchTime = 0; // Réinitialiser pour éviter un triple-tap
+            } else {
+                lastTouchTime = currentTime;
+            }
         }
         
-        // --- Initial Event Listeners ---
+        // --- Démarrage ---
         
-        selector.addEventListener('change', () => {
-            startAutomaticRotation(selector.value);
-        });
+        // Si l'audio a déjà chargé, on peut démarrer l'animation.
+        // On démarre l'animation, même si la vitesse cible est 0.
+        // L'utilisateur doit cliquer une première fois pour que l'audio puisse jouer.
+        requestAnimationFrame(animate); 
 
-        vinyl.addEventListener('mousedown', startTurn);
-        vinyl.addEventListener('touchstart', startTurn);
-        
-        // Double-click/tap to resume/start selected RPM
-        const stopResumeHandler = (e) => {
-            e.preventDefault();
-            stopAllRotation();
-            startAutomaticRotation(selector.value); 
-        };
-        
-        vinyl.addEventListener('dblclick', stopResumeHandler);
-        vinyl.addEventListener('touchend', (e) => {
-            const now = new Date().getTime();
-            const lastTouchTime = vinyl.lastTouchTime || 0;
-            const delta = now - lastTouchTime;
-            const doubleTapThreshold = 300; 
-
-            if (delta > 0 && delta < doubleTapThreshold) {
-                stopResumeHandler(e);
-            }
-            vinyl.lastTouchTime = now;
-        });
-
-        // Initial setup and load audio
-        window.addEventListener('resize', updateCenter);
-        window.addEventListener('load', () => {
-            updateCenter();
-            // Load audio from the provided GitHub link's resource
-            loadAudio('vinyl.mp3'); 
-        });
     </script>
 </body>
-
 </html>
