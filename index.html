@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Turntable (Optimized)</title>
+<title>Turntable (Fixed)</title>
 <link rel="icon" href="data:,">
 
 <style>
@@ -43,7 +43,6 @@
 
     .zoomed-view { transform:scale(1.3); }
 
-    /* PERFECT CIRCLE + GPU ACCEL + UNIFORM RESIZE */
     #vinyl {
         position:absolute;
         inset:5%;
@@ -131,7 +130,7 @@
 <h1 id="status">Tap to enable audio</h1>
 
 <div id="turntable-container">
-    <img id="vinyl" src="img/DISC.png">
+    <img id="vinyl" src="img/DISC.png" alt="Vinyl Record">
 
     <div id="controls-wrapper">
         <button id="stop-button">STOP</button>
@@ -167,6 +166,8 @@
 const vinyl = document.getElementById("vinyl");
 const statusTxt = document.getElementById("status");
 const turntable = document.getElementById("turntable-container");
+const pitchSlider = document.getElementById("pitch-slider");
+const pitchValue = document.getElementById("pitch-value");
 
 let audioContext = null;
 let audioBuffer = null;
@@ -192,12 +193,10 @@ let pitchOffset = 0;
 ------------------------------------ */
 function engineLoop() {
     velocity += (targetVelocity - velocity) * smoothing;
-
     currentRotation += velocity;
-
     vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
 
-    if (audioSource) {
+    if (audioSource && audioContext) {
         const rate = Math.max(0.05, baseRate + velocity * SCRATCH_SENS + pitchOffset);
         audioSource.playbackRate.setValueAtTime(rate, audioContext.currentTime);
     }
@@ -245,6 +244,7 @@ vinyl.addEventListener("pointerdown", e => {
         return;
 
     isDragging = true;
+    updateCenter();
     lastAngle = angleAt(e);
     vinyl.setPointerCapture(e.pointerId);
 });
@@ -253,9 +253,12 @@ vinyl.addEventListener("pointermove", e => {
     if (!isDragging) return;
 
     const a = angleAt(e);
-    const delta = a - lastAngle;
+    let delta = a - lastAngle;
+    
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    
     lastAngle = a;
-
     currentRotation += delta;
     vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
 
@@ -272,7 +275,7 @@ vinyl.addEventListener("pointerup", () => {
 /* ------------------------------------
        PITCH
 ------------------------------------ */
-document.getElementById("pitch-slider").addEventListener("input", () => {
+pitchSlider.addEventListener("input", () => {
     pitchOffset = parseInt(pitchSlider.value) / 100;
     pitchValue.textContent = pitchSlider.value + "%";
 });
@@ -281,20 +284,36 @@ document.getElementById("pitch-slider").addEventListener("input", () => {
        AUDIO LOAD + PLAY
 ------------------------------------ */
 async function loadAudio(url){
-    audioContext = new AudioContext();
-    statusTxt.textContent = "Loading audio…";
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        statusTxt.textContent = "Loading audio…";
 
-    const res = await fetch(url);
-    const data = await res.arrayBuffer();
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+            throw new Error(`Failed to load audio: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.arrayBuffer();
+        audioBuffer = await audioContext.decodeAudioData(data);
 
-    audioBuffer = await audioContext.decodeAudioData(data);
-
-    statusTxt.textContent = "Ready. Pick an RPM.";
-    startAudio(BASE_RATE_33);
+        statusTxt.textContent = "✓ Audio loaded! Pick an RPM to start.";
+        startAudio(BASE_RATE_33);
+        
+    } catch (error) {
+        console.error("Audio loading error:", error);
+        statusTxt.textContent = `⚠ Error: ${error.message}. Check audio file path!`;
+        statusTxt.style.color = "#ff6b6b";
+    }
 }
 
 function startAudio(rate){
-    if (audioSource) audioSource.stop();
+    if (!audioContext || !audioBuffer) return;
+    
+    if (audioSource) {
+        audioSource.stop();
+        audioSource.disconnect();
+    }
 
     audioSource = audioContext.createBufferSource();
     audioSource.buffer = audioBuffer;
@@ -322,10 +341,11 @@ document.getElementById("zoom-button").onclick = () => {
 ------------------------------------ */
 function userStart() {
     if (!audioContext) {
-        loadAudio("vinyl.wav");   // ⚠ REPLACE WITH YOUR WAV OR OGG
+        // Try multiple possible audio file paths
+        const audioPath = "James_Brown_The_Famous_Flames_-_Ain_t_That_A_Groove_Part_1_2_.wav"; // Change this to your actual file path
+        loadAudio(audioPath);
     }
     document.removeEventListener("pointerdown", userStart);
-    statusTxt.textContent = "Loading…";
 }
 
 document.addEventListener("pointerdown", userStart);
