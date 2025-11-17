@@ -6,6 +6,7 @@
 <link rel="icon" href="data:,">
 
 <style>
+/* --- STYLES (NO CHANGE) --- */
     * { margin:0; padding:0; box-sizing:border-box; }
 
     body {
@@ -14,7 +15,7 @@
         flex-direction:column;
         align-items:center;
         justify-content:center;
-        background:#333; /* RESTORED: Background color */
+        background:#333;
         user-select:none;
         color:white;
         font-family:Arial;
@@ -127,9 +128,7 @@
 
 <body>
 
-<h1 id="status">Loading audio (Preload=auto)...</h1>
-
-<div id="turntable-container">
+<h1 id="status">Loading audio...</h1> <div id="turntable-container">
     <img id="vinyl" src="img/DISC.png" alt="Vinyl Record">
 
     <div id="controls-wrapper">
@@ -168,12 +167,12 @@ const statusTxt = document.getElementById("status");
 const turntable = document.getElementById("turntable-container");
 const pitchSlider = document.getElementById("pitch-slider");
 const pitchValue = document.getElementById("pitch-value");
-const audioPath = "James_Brown_The_Famous_Flames_-_Ain_t_That_A_Groove_Part_1_2_.mp3";
+const audioPath = "James_Brown_The_Famous_Flames_-_Ain_t_That_A_Groove_Part_1_2_.mp3"; // Moved up
 
 let audioContext = null;
 let audioBuffer = null;
 let audioSource = null;
-let audioReady = false;
+let audioReady = false; // Flag to check if audio buffer is loaded
 
 let center = {x:0, y:0};
 let isDragging = false;
@@ -198,7 +197,7 @@ function engineLoop() {
     currentRotation += velocity;
     vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
 
-    if (audioSource && audioContext && audioContext.state === 'running') {
+    if (audioSource && audioContext && audioContext.state === 'running') { // Check context state
         const rate = Math.max(0.05, baseRate + velocity * SCRATCH_SENS + pitchOffset);
         audioSource.playbackRate.setValueAtTime(rate, audioContext.currentTime);
     }
@@ -214,6 +213,7 @@ function setRPM(mode) {
     if (mode === "33") {
         baseRate = BASE_RATE_33;
         targetVelocity = 360 / 1.8 / 60;
+        // If audio is ready and context is running, start playing
         if (audioReady && audioContext && audioContext.state === 'running') {
             startAudio(baseRate);
         }
@@ -221,18 +221,20 @@ function setRPM(mode) {
     else if (mode === "45") {
         baseRate = BASE_RATE_45;
         targetVelocity = 360 / 1.3 / 60;
+        // If audio is ready and context is running, start playing
         if (audioReady && audioContext && audioContext.state === 'running') {
             startAudio(baseRate);
         }
     }
     else {
         targetVelocity = 0;
-        stopAudio();
+        stopAudio(); // Explicitly stop audio when RPM is OFF
     }
 }
 
 document.querySelectorAll('input[name="rpm"]').forEach(btn => {
     btn.addEventListener("change", () => {
+        // Try to resume context if not running (for the first user-interaction)
         if (audioContext && audioContext.state !== 'running') {
             audioContext.resume().then(() => {
                 statusTxt.textContent = "Audio Enabled. Pick an RPM to start.";
@@ -258,9 +260,11 @@ function angleAt(e){
 }
 
 vinyl.addEventListener("pointerdown", e => {
+    // Try to resume context on drag start as well, for robustness
     if (audioContext && audioContext.state !== 'running') {
         audioContext.resume().then(() => {
             statusTxt.textContent = "Audio Enabled. Pick an RPM to start.";
+            // Now continue with drag
             if (document.querySelector('input[name="rpm"]:checked').value === "off")
                 return;
             
@@ -336,6 +340,7 @@ async function loadAudio(url){
         audioBuffer = await audioContext.decodeAudioData(data);
         audioReady = true;
 
+        // Display message to prompt user interaction to enable playback
         statusTxt.textContent = "✓ Audio is preloaded! Tap anywhere or use RPM controls to enable playback.";
         statusTxt.style.color = "#1abc9c";
         
@@ -349,6 +354,7 @@ async function loadAudio(url){
 function startAudio(rate){
     if (!audioContext || !audioBuffer || audioContext.state !== 'running') return;
     
+    // Stop the current source if it's playing
     if (audioSource) {
         audioSource.stop();
         audioSource.disconnect();
@@ -373,10 +379,11 @@ function stopAudio() {
 /* ------------------------------------
        BUTTONS
 ------------------------------------ */
+// STOP Button now explicitly stops playback
 document.getElementById("stop-button").onclick = () => {
     document.getElementById("speed-off").checked = true;
     setRPM("off");
-    stopAudio();
+    stopAudio(); // Ensure audio is stopped
     statusTxt.textContent = "Audio STOPPED. Pick an RPM to restart.";
 };
 
@@ -386,6 +393,7 @@ document.getElementById("zoom-button").onclick = () => {
 };
 
 
+// Function to resume the AudioContext on the first user interaction
 function enableAudioContext() {
     initAudioContext();
     if (audioContext.state !== 'running') {
@@ -396,6 +404,7 @@ function enableAudioContext() {
     }
 }
 
+// Attach the context-enabling function to the body for the first user interaction
 document.body.addEventListener("pointerdown", enableAudioContext, { once: true });
 
 
