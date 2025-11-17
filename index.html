@@ -170,9 +170,16 @@
 
             <div id="status">Loading…</div>
 
-            <div id="speed-control">
-    <span class="label">RPM</span>
-    <img id="rpm-image" src="img/ChickenHead.png" style="width:120px; margin-left:10px; cursor:pointer;" />
+            <div id="speed-control" style="position:absolute; left:16px; bottom:20px; display:flex; flex-direction:column; align-items:flex-start; pointer-events:auto; z-index:20;">
+    <div style="width:120px; display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+        <span>45 RPM</span>
+        <span>OFF</span>
+        <span>33 RPM</span>
+    </div>
+    <div style="position:relative;">
+        <img id="rpm-image" src="img/rpmControl.png" style="width:120px; cursor:pointer; position:relative; z-index:2;" />
+        <div id="rpm-hitbox" style="position:absolute; inset:0; z-index:1;"></div>
+    </div>
 </div>
             </div>
 
@@ -185,18 +192,19 @@
     </div>
 
 <script>
-/* RPM image click mapping */
+/* RPM image click mapping with reversed logic */
 const rpmImg = document.getElementById('rpm-image');
 rpmImg.addEventListener('click', (e)=>{
     const rect = rpmImg.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const pos = x / rect.width;
+    // reversed control: right → 45, middle → OFF, left → 33
     if(pos < 0.33){
-        document.getElementById('status').textContent = '45 RPM';
+        document.getElementById('status').textContent = '33 RPM';
     } else if(pos < 0.66){
         document.getElementById('status').textContent = 'OFF';
     } else {
-        document.getElementById('status').textContent = '33 RPM';
+        document.getElementById('status').textContent = '45 RPM';
     }
 });
 </script>
