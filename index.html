@@ -6,161 +6,160 @@
 <link rel="icon" href="data:,">
 
 <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+/* --- STYLES (NO CHANGE) --- */
+    * { margin:0; padding:0; box-sizing:border-box; }
 
-    body {
-        height: 100vh;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        background:#333;
-        user-select:none;
-        color:white;
-        font-family:Arial;
-    }
+    body {
+        height: 100vh;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        background:#333;
+        user-select:none;
+        color:white;
+        font-family:Arial;
+    }
 
-    h1 {
-        position:absolute;
-        top:5%;
-        text-align:center;
-        width:100%;
-    }
+    h1 {
+        position:absolute;
+        top:5%;
+        text-align:center;
+        width:100%;
+    }
 
-    #turntable-container {
-        position:relative;
-        width:80vw; height:80vw;
-        max-width:700px; max-height:700px;
-        aspect-ratio:1/1;
-        background:#a08c78;
-        border-radius:10px;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        overflow:hidden;
-        transition:transform .3s ease;
-    }
+    #turntable-container {
+        position:relative;
+        width:80vw; height:80vw;
+        max-width:700px; max-height:700px;
+        aspect-ratio:1/1;
+        background:#a08c78;
+        border-radius:10px;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        overflow:hidden;
+        transition:transform .3s ease;
+    }
 
-    .zoomed-view { transform:scale(1.3); }
+    .zoomed-view { transform:scale(1.3); }
 
-    #vinyl {
-        position:absolute;
-        inset:5%;
-        width:90%;
-        height:90%;
-        aspect-ratio:1/1;
-        border-radius:50%;
-        object-fit:contain;
-        cursor:grab;
-        transform:rotate(0deg) translateZ(0);
-        will-change:transform;
-    }
+    #vinyl {
+        position:absolute;
+        inset:5%;
+        width:90%;
+        height:90%;
+        aspect-ratio:1/1;
+        border-radius:50%;
+        object-fit:contain;
+        cursor:grab;
+        transform:rotate(0deg) translateZ(0);
+        will-change:transform;
+    }
 
-    #controls-wrapper {
-        position:absolute;
-        width:100%; height:100%;
-        pointer-events:none;
-    }
+    #controls-wrapper {
+        position:absolute;
+        width:100%; height:100%;
+        pointer-events:none;
+    }
 
-    button {
-        pointer-events:auto;
-        padding:10px 20px;
-        border:none;
-        border-radius:6px;
-        font-weight:bold;
-        color:white;
-        cursor:pointer;
-    }
+    button {
+        pointer-events:auto;
+        padding:10px 20px;
+        border:none;
+        border-radius:6px;
+        font-weight:bold;
+        color:white;
+        cursor:pointer;
+    }
 
-    #stop-button { background:#c0392b; position:absolute; top:20px; left:20px; }
-    #zoom-button { background:#3498db; position:absolute; top:20px; left:120px; }
+    #stop-button { background:#c0392b; position:absolute; top:20px; left:20px; }
+    #zoom-button { background:#3498db; position:absolute; top:20px; left:120px; }
 
-    #speed-control, #pitch-control {
-        position:absolute;
-        bottom:30px;
-        font-size:14px;
-        pointer-events:auto;
-        display:flex;
-        align-items:center;
-    }
+    #speed-control, #pitch-control {
+        position:absolute;
+        bottom:30px;
+        font-size:14px;
+        pointer-events:auto;
+        display:flex;
+        align-items:center;
+    }
 
-    #speed-control { left:20px; }
-    #pitch-control { right:20px; }
+    #speed-control { left:20px; }
+    #pitch-control { right:20px; }
 
-    .knob-container {
-        display:flex;
-        background:#222;
-        padding:5px;
-        margin-left:10px;
-        border-radius:10px;
-    }
-    .knob-container input { display:none; }
-    .knob-container label {
-        background:#555;
-        padding:5px 10px;
-        margin:0 2px;
-        border-radius:5px;
-        cursor:pointer;
-    }
-    .knob-container input:checked + label {
-        background:#1abc9c;
-        font-weight:bold;
-    }
+    .knob-container {
+        display:flex;
+        background:#222;
+        padding:5px;
+        margin-left:10px;
+        border-radius:10px;
+    }
+    .knob-container input { display:none; }
+    .knob-container label {
+        background:#555;
+        padding:5px 10px;
+        margin:0 2px;
+        border-radius:5px;
+        cursor:pointer;
+    }
+    .knob-container input:checked + label {
+        background:#1abc9c;
+        font-weight:bold;
+    }
 
-    input[type="range"] {
-        -webkit-appearance:none;
-        width:150px;
-        height:10px;
-        background:#ccc;
-        border-radius:5px;
-        margin-left:10px;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance:none;
-        width:12px; height:22px;
-        background:#2c3e50;
-        border-radius:3px;
-        cursor:pointer;
-    }
+    input[type="range"] {
+        -webkit-appearance:none;
+        width:150px;
+        height:10px;
+        background:#ccc;
+        border-radius:5px;
+        margin-left:10px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance:none;
+        width:12px; height:22px;
+        background:#2c3e50;
+        border-radius:3px;
+        cursor:pointer;
+    }
 </style>
 </head>
 
 <body>
 
-<h1 id="status">Tap to enable audio</h1>
+<h1 id="status">Loading audio...</h1> <div id="turntable-container">
+    <img id="vinyl" src="img/DISC.png" alt="Vinyl Record">
 
-<div id="turntable-container">
-    <img id="vinyl" src="img/DISC.png" alt="Vinyl Record">
+    <div id="controls-wrapper">
+        <button id="stop-button">STOP</button>
+        <button id="zoom-button">ZOOM</button>
 
-    <div id="controls-wrapper">
-        <button id="stop-button">STOP</button>
-        <button id="zoom-button">ZOOM</button>
+        <div id="speed-control">
+            SPEED:
+            <div class="knob-container">
+                <input type="radio" id="speed-45" name="rpm" value="45">
+                <label for="speed-45">45</label>
 
-        <div id="speed-control">
-            SPEED:
-            <div class="knob-container">
-                <input type="radio" id="speed-45" name="rpm" value="45">
-                <label for="speed-45">45</label>
+                <input type="radio" id="speed-off" name="rpm" value="off" checked>
+                <label for="speed-off">OFF</label>
 
-                <input type="radio" id="speed-off" name="rpm" value="off" checked>
-                <label for="speed-off">OFF</label>
+                <input type="radio" id="speed-33" name="rpm" value="33">
+                <label for="speed-33">33</label>
+            </div>
+        </div>
 
-                <input type="radio" id="speed-33" name="rpm" value="33">
-                <label for="speed-33">33</label>
-            </div>
-        </div>
-
-        <div id="pitch-control">
-            PITCH:
-            <input type="range" id="pitch-slider" min="-10" max="10" value="0">
-            <span id="pitch-value">0%</span>
-        </div>
-    </div>
+        <div id="pitch-control">
+            PITCH:
+            <input type="range" id="pitch-slider" min="-10" max="10" value="0">
+            <span id="pitch-value">0%</span>
+        </div>
+    </div>
 </div>
 
 <script>
 /* ------------------------------------
-       VARIABLES
+       VARIABLES
 ------------------------------------ */
 
 const vinyl = document.getElementById("vinyl");
@@ -168,10 +167,12 @@ const statusTxt = document.getElementById("status");
 const turntable = document.getElementById("turntable-container");
 const pitchSlider = document.getElementById("pitch-slider");
 const pitchValue = document.getElementById("pitch-value");
+const audioPath = "James_Brown_The_Famous_Flames_-_Ain_t_That_A_Groove_Part_1_2_.mp3"; // Moved up
 
 let audioContext = null;
 let audioBuffer = null;
 let audioSource = null;
+let audioReady = false; // Flag to check if audio buffer is loaded
 
 let center = {x:0, y:0};
 let isDragging = false;
@@ -189,169 +190,232 @@ let baseRate = BASE_RATE_33;
 let pitchOffset = 0;
 
 /* ------------------------------------
-       ENGINE LOOP (smoothed)
+       ENGINE LOOP (smoothed)
 ------------------------------------ */
 function engineLoop() {
-    velocity += (targetVelocity - velocity) * smoothing;
-    currentRotation += velocity;
-    vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
+    velocity += (targetVelocity - velocity) * smoothing;
+    currentRotation += velocity;
+    vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
 
-    if (audioSource && audioContext) {
-        const rate = Math.max(0.05, baseRate + velocity * SCRATCH_SENS + pitchOffset);
-        audioSource.playbackRate.setValueAtTime(rate, audioContext.currentTime);
-    }
+    if (audioSource && audioContext && audioContext.state === 'running') { // Check context state
+        const rate = Math.max(0.05, baseRate + velocity * SCRATCH_SENS + pitchOffset);
+        audioSource.playbackRate.setValueAtTime(rate, audioContext.currentTime);
+    }
 
-    requestAnimationFrame(engineLoop);
+    requestAnimationFrame(engineLoop);
 }
 requestAnimationFrame(engineLoop);
 
 /* ------------------------------------
-       RPM CONTROL
+       RPM CONTROL
 ------------------------------------ */
 function setRPM(mode) {
-    if (mode === "33") {
-        baseRate = BASE_RATE_33;
-        targetVelocity = 360 / 1.8 / 60;
-    }
-    else if (mode === "45") {
-        baseRate = BASE_RATE_45;
-        targetVelocity = 360 / 1.3 / 60;
-    }
-    else {
-        targetVelocity = 0;
-    }
+    if (mode === "33") {
+        baseRate = BASE_RATE_33;
+        targetVelocity = 360 / 1.8 / 60;
+        // If audio is ready and context is running, start playing
+        if (audioReady && audioContext && audioContext.state === 'running') {
+            startAudio(baseRate);
+        }
+    }
+    else if (mode === "45") {
+        baseRate = BASE_RATE_45;
+        targetVelocity = 360 / 1.3 / 60;
+        // If audio is ready and context is running, start playing
+        if (audioReady && audioContext && audioContext.state === 'running') {
+            startAudio(baseRate);
+        }
+    }
+    else {
+        targetVelocity = 0;
+        stopAudio(); // Explicitly stop audio when RPM is OFF
+    }
 }
 
 document.querySelectorAll('input[name="rpm"]').forEach(btn => {
-    btn.addEventListener("change", () => setRPM(btn.value));
+    btn.addEventListener("change", () => {
+        // Try to resume context if not running (for the first user-interaction)
+        if (audioContext && audioContext.state !== 'running') {
+            audioContext.resume().then(() => {
+                statusTxt.textContent = "Audio Enabled. Pick an RPM to start.";
+                setRPM(btn.value);
+            });
+        } else {
+            setRPM(btn.value);
+        }
+    });
 });
 
 /* ------------------------------------
-       DRAG (POINTER EVENTS)
+       DRAG (POINTER EVENTS)
 ------------------------------------ */
 function updateCenter() {
-    const r = turntable.getBoundingClientRect();
-    center.x = r.left + r.width/2;
-    center.y = r.top + r.height/2;
+    const r = turntable.getBoundingClientRect();
+    center.x = r.left + r.width/2;
+    center.y = r.top + r.height/2;
 }
 
 function angleAt(e){
-    return Math.atan2(e.clientY - center.y, e.clientX - center.x) * 180 / Math.PI;
+    return Math.atan2(e.clientY - center.y, e.clientX - center.x) * 180 / Math.PI;
 }
 
 vinyl.addEventListener("pointerdown", e => {
-    if (document.querySelector('input[name="rpm"]:checked').value === "off")
-        return;
+    // Try to resume context on drag start as well, for robustness
+    if (audioContext && audioContext.state !== 'running') {
+        audioContext.resume().then(() => {
+            statusTxt.textContent = "Audio Enabled. Pick an RPM to start.";
+            // Now continue with drag
+            if (document.querySelector('input[name="rpm"]:checked').value === "off")
+                return;
+            
+            isDragging = true;
+            updateCenter();
+            lastAngle = angleAt(e);
+            vinyl.setPointerCapture(e.pointerId);
+        });
+        return;
+    }
 
-    isDragging = true;
-    updateCenter();
-    lastAngle = angleAt(e);
-    vinyl.setPointerCapture(e.pointerId);
+    if (document.querySelector('input[name="rpm"]:checked').value === "off")
+        return;
+
+    isDragging = true;
+    updateCenter();
+    lastAngle = angleAt(e);
+    vinyl.setPointerCapture(e.pointerId);
 });
 
 vinyl.addEventListener("pointermove", e => {
-    if (!isDragging) return;
+    if (!isDragging) return;
 
-    const a = angleAt(e);
-    let delta = a - lastAngle;
-    
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-    
-    lastAngle = a;
-    currentRotation += delta;
-    vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
+    const a = angleAt(e);
+    let delta = a - lastAngle;
+    
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    
+    lastAngle = a;
+    currentRotation += delta;
+    vinyl.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
 
-    velocity = delta;
-    targetVelocity = delta;
+    velocity = delta;
+    targetVelocity = delta;
 });
 
 vinyl.addEventListener("pointerup", () => {
-    isDragging = false;
-    const mode = document.querySelector('input[name="rpm"]:checked').value;
-    setRPM(mode);
+    isDragging = false;
+    const mode = document.querySelector('input[name="rpm"]:checked').value;
+    setRPM(mode);
 });
 
 /* ------------------------------------
-       PITCH
+       PITCH
 ------------------------------------ */
 pitchSlider.addEventListener("input", () => {
-    pitchOffset = parseInt(pitchSlider.value) / 100;
-    pitchValue.textContent = pitchSlider.value + "%";
+    pitchOffset = parseInt(pitchSlider.value) / 100;
+    pitchValue.textContent = pitchSlider.value + "%";
 });
 
 /* ------------------------------------
-       AUDIO LOAD + PLAY
+       AUDIO LOAD + PLAYBACK
 ------------------------------------ */
+function initAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
 async function loadAudio(url){
-    try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        statusTxt.textContent = "Loading audio…";
+    try {
+        initAudioContext();
+        statusTxt.textContent = "Loading audio (This happens automatically now)...";
 
-        const res = await fetch(url);
-        
-        if (!res.ok) {
-            throw new Error(`Failed to load audio: ${res.status} ${res.statusText}`);
-        }
-        
-        const data = await res.arrayBuffer();
-        audioBuffer = await audioContext.decodeAudioData(data);
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+            throw new Error(`Failed to load audio: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.arrayBuffer();
+        audioBuffer = await audioContext.decodeAudioData(data);
+        audioReady = true;
 
-        statusTxt.textContent = "✓ Audio loaded! Pick an RPM to start.";
-        startAudio(BASE_RATE_33);
-        
-    } catch (error) {
-        console.error("Audio loading error:", error);
-        statusTxt.textContent = `⚠ Error: ${error.message}. Check audio file path!`;
-        statusTxt.style.color = "#ff6b6b";
-    }
+        // Display message to prompt user interaction to enable playback
+        statusTxt.textContent = "✓ Audio is preloaded! Tap anywhere or use RPM controls to enable playback.";
+        statusTxt.style.color = "#1abc9c";
+        
+    } catch (error) {
+        console.error("Audio loading error:", error);
+        statusTxt.textContent = `⚠ Error: ${error.message}. Check audio file path!`;
+        statusTxt.style.color = "#ff6b6b";
+    }
 }
 
 function startAudio(rate){
-    if (!audioContext || !audioBuffer) return;
-    
-    if (audioSource) {
-        audioSource.stop();
-        audioSource.disconnect();
-    }
+    if (!audioContext || !audioBuffer || audioContext.state !== 'running') return;
+    
+    // Stop the current source if it's playing
+    if (audioSource) {
+        audioSource.stop();
+        audioSource.disconnect();
+    }
 
-    audioSource = audioContext.createBufferSource();
-    audioSource.buffer = audioBuffer;
-    audioSource.loop = true;
-    audioSource.connect(audioContext.destination);
-    audioSource.playbackRate.value = rate;
-    audioSource.start();
+    audioSource = audioContext.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    audioSource.loop = true;
+    audioSource.connect(audioContext.destination);
+    audioSource.playbackRate.value = rate;
+    audioSource.start();
+}
+
+function stopAudio() {
+    if (audioSource) {
+        audioSource.stop();
+        audioSource.disconnect();
+        audioSource = null;
+    }
 }
 
 /* ------------------------------------
-       BUTTONS
+       BUTTONS
 ------------------------------------ */
+// STOP Button now explicitly stops playback
 document.getElementById("stop-button").onclick = () => {
-    document.getElementById("speed-off").checked = true;
-    setRPM("off");
+    document.getElementById("speed-off").checked = true;
+    setRPM("off");
+    stopAudio(); // Ensure audio is stopped
+    statusTxt.textContent = "Audio STOPPED. Pick an RPM to restart.";
 };
 
 document.getElementById("zoom-button").onclick = () => {
-    turntable.classList.toggle("zoomed-view");
-    setTimeout(updateCenter, 300);
+    turntable.classList.toggle("zoomed-view");
+    setTimeout(updateCenter, 300);
 };
 
-function userStart() {
-    if (!audioContext) {
-        const audioPath = "James_Brown_The_Famous_Flames_-_Ain_t_That_A_Groove_Part_1_2_.mp3";
-        loadAudio(audioPath);
-    }
-    document.removeEventListener("pointerdown", userStart);
+
+// Function to resume the AudioContext on the first user interaction
+function enableAudioContext() {
+    initAudioContext();
+    if (audioContext.state !== 'running') {
+        audioContext.resume().then(() => {
+            statusTxt.textContent = "Audio Enabled. Pick an RPM to start.";
+            document.body.removeEventListener("pointerdown", enableAudioContext);
+        });
+    }
 }
 
-document.addEventListener("pointerdown", userStart);
+// Attach the context-enabling function to the body for the first user interaction
+document.body.addEventListener("pointerdown", enableAudioContext, { once: true });
+
 
 /* ------------------------------------
-       INIT
+       INIT
 ------------------------------------ */
 window.addEventListener("resize", updateCenter);
 updateCenter();
 
+// Start loading the audio immediately (preload=auto)
+loadAudio(audioPath); 
 </script>
 </body>
 </html>
