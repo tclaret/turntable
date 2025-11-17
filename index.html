@@ -47,8 +47,8 @@
 
     #rpm-wrapper {
         position:absolute;
-        bottom:5%;
-        left:5%;
+        bottom:2%;
+        left:2%;
         width:auto;
         display:flex;
         flex-direction:column;
@@ -57,18 +57,18 @@
     }
 
     #rpm-img {
-        width:37.5%;
+        width:40%;
         display:block;
         transform:rotate(0deg);
         transition: transform 0.2s ease;
-        margin-bottom:10px;
+        margin-bottom:5px;
         z-index:10;
     }
 
     #rpm-controls {
         display:flex;
         justify-content:space-between;
-        width:200px;
+        width:70px; /* narrower control */
         position:absolute;
         top:0;
         left:0;
@@ -76,8 +76,8 @@
     }
 
     .rpm-choice {
-        width:20px;
-        height:20px;
+        width:15px;
+        height:15px;
         border-radius:50%;
         background:rgba(255,255,255,0.3);
         cursor:pointer;
@@ -89,9 +89,9 @@
     .rpm-labels {
         display:flex;
         justify-content:space-between;
-        width:200px;
-        margin-top:5px;
-        font-size:14px;
+        width:100px; /* narrower label width */
+        margin-top:3px;
+        font-size:12px;
         color:#fff;
         z-index:10;
     }
@@ -177,9 +177,9 @@ function setRPM(mode){
     targetVelocity = RPM_SPEED[mode];
     rpmChoices.forEach(c=>c.classList.remove('active'));
     document.querySelector(`.rpm-choice[data-rpm='${mode}']`).classList.add('active');
-    if(mode=="45") rpmImg.style.transform="rotate(-30deg) scale(0.375)";
-    else if(mode=="33") rpmImg.style.transform="rotate(30deg) scale(0.375)";
-    else rpmImg.style.transform="rotate(0deg) scale(0.375)";
+    if(mode=="45") rpmImg.style.transform="rotate(-30deg) scale(0.3)";
+    else if(mode=="33") rpmImg.style.transform="rotate(30deg) scale(0.3)";
+    else rpmImg.style.transform="rotate(0deg) scale(0.3)";
 }
 
 rpmChoices.forEach(c=>c.addEventListener('click', ()=>{ setRPM(c.dataset.rpm); }));
