@@ -351,71 +351,110 @@
     let isDragging = false;
     let lastAngle = 0;
     let center = {x:0, y:0};
-    // ADJUSTED: Drastically reduced return strength for increased inertia (simulates heavy platter/low friction)
-    const returnStrength = 0.005; 
-    const dragSensitivity = 1.5; // NEW: Multiplier for drag input for mobile screen responsiveness
-    const pitchMappingFactor = 0.15; // NEW: Adjusted how rotation velocity affects audio pitch
+    
+    // Physics constants for scratching
+    const returnStrength = 0.005; // Low friction/high inertia
+    const dragSensitivity = 1.5; // Multiplier for drag input
+    const pitchMappingFactor = 0.15; // How rotation velocity affects audio pitch
     let isZoomed = false;
 
-    // Initial State
-    let rpmMode = "off";
+    // Audio Cueing State
+    let audioCuePointSeconds = 0; // The audio position (offset) to start/restart from
+    let isPlaying = false; // Simple flag to track if audio is active
+    let audioDurationSeconds = 0; // Total duration of the audio buffer
+    
     // Base speed values (will be multiplied by pitch factor)
+    let rpmMode = "off";
     const RPM_BASE_SPEED = {"33":0.6, "45":0.9, "off":0};
+    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // Used as the baseline for rate calculation
 
     // Audio Setup
     let audioCtx = null;
     let buffer = null;
     let source = null;
-    const audioURL = "JB.mp3"; // NOTE: This file must be available in the environment to load.
+    const audioURL = "JB.mp3"; 
 
     function initAudio(){ 
-        // Initialize AudioContext if not already done
         if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); 
     }
+    
+    /**
+     * Maps the visual rotation (in degrees) to an audio offset (in seconds).
+     * This is the core function for maintaining the cue point across stops/starts.
+     * We assume one full 360-degree rotation of the vinyl represents one full loop 
+     * of the audio buffer.
+     * @param {number} degrees - The total accumulated rotation in degrees.
+     * @param {number} duration - The total duration of the audio buffer.
+     * @returns {number} The audio time offset in seconds.
+     */
+    function rotationToAudioOffset(degrees, duration) {
+        // We use a constant mapping: 360 degrees = full duration.
+        // The rotation is modulo 360 to stay within one loop rotation
+        let offset = (degrees * duration / 360) % duration;
+        // Handle negative offsets (reverse scratching)
+        if (offset < 0) {
+            offset += duration;
+        }
+        return offset;
+    }
+
 
     /*
-     * ASYNC function to ensure AudioContext is resumed and audio buffer is loaded, 
-     * which must happen after a user gesture.
+     * ASYNC function to load audio and start playback from a specific offset.
+     * This is called when transitioning from OFF to 33/45.
      */
     async function startPlayback() {
         initAudio();
-        // Resume context on user action (key fix for the error)
         if (audioCtx.state === 'suspended') {
             await audioCtx.resume();
         }
 
-        // Load buffer if not already loaded (prevents error if called multiple times)
         if(!buffer) {
             try {
-                // IMPORTANT: The 'JB.mp3' file must be uploaded alongside the HTML for this to work.
                 const res = await fetch(audioURL); 
                 if(!res.ok) throw new Error("Audio file not found: " + audioURL);
                 const arr = await res.arrayBuffer(); 
                 buffer = await audioCtx.decodeAudioData(arr); 
+                audioDurationSeconds = buffer.duration; // Store buffer duration
             } catch(e) {
                 console.warn("Audio load or decode failed. Ensure JB.mp3 is available:", e);
-                return; // Stop if load failed
+                return; 
             }
         }
         
-        // Start playback if not already running (or restart)
+        // Stop the existing source before creating a new one
         if(source) {
             try { source.stop(); } catch(e){}
         }
+
         source = audioCtx.createBufferSource(); 
         source.buffer = buffer; 
         source.loop = true; 
-        // Initial playback rate is 1, adjusted in engine loop
-        source.playbackRate.value = 1; 
+        
+        // Initial playback rate is 1.0 (normal speed), modulated by the pitch slider
+        source.playbackRate.value = 1.0 * currentPitchFactor; 
         source.connect(audioCtx.destination); 
-        source.start(); 
+        
+        // Start playback from the current cue point
+        source.start(0, audioCuePointSeconds); 
+        isPlaying = true;
     }
 
+    /**
+     * Stops the audio and saves the current cue point based on visual rotation.
+     */
     function stopAudio() {
-        if(source) {
-            try { source.stop(); } catch(e){}
-            source = null;
+        if(source && audioCtx && buffer) {
+            try { 
+                // Calculate the new cue point based on the last visual rotation
+                audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
+                source.stop(); 
+            } catch(e){
+                console.error("Error stopping source:", e);
+            }
         }
+        source = null;
+        isPlaying = false;
     }
 
     // --- Physics Engine ---
@@ -432,8 +471,11 @@
     }
 
     vinyl.addEventListener("pointerdown", async e => { 
-        // Start playback immediately on drag down
-        await startPlayback();
+        // Only start audio if not playing and RPM is set to ON (to load the buffer)
+        if(!isPlaying && rpmMode !== 'off') {
+             await startPlayback(); 
+        }
+        // If playing, we just start dragging; we don't restart the audio source.
         
         isDragging=true; 
         lastAngle=getAngle(e); 
@@ -449,7 +491,6 @@
         if(delta < -180) delta += 360; 
         lastAngle = ang; 
         
-        // APPLIED: Multiply delta by dragSensitivity for more responsive scratching
         const dragDelta = delta * dragSensitivity; 
         
         currentRotation += dragDelta; 
@@ -464,8 +505,13 @@
         updateTargetVelocity(); 
         vinyl.style.cursor = "grab";
         
-        // If the mode is off, audio stops after letting go (no persistent drag velocity)
-        if(rpmMode === 'off') stopAudio(); 
+        // If the mode is off, save the cue point and stop the audio after letting go
+        if(rpmMode === 'off') {
+            stopAudio(); 
+            // Reset visual rotation to 0 when stopped for a clean look
+            currentRotation = 0;
+            vinyl.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+        }
     });
     
     // --- Target Velocity Calculation ---
@@ -488,11 +534,14 @@
         vinyl.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`; 
         
         // Pitch shift effect: link rotation speed (velocity) to music speed
-        if(source && audioCtx){ 
-            // Calculate playback rate (1 = normal speed, adjusted by manual/target velocity)
-            // APPLIED: Use new pitchMappingFactor for more extreme pitch shifts
-            const rate = Math.max(0.01, 1 + velocity * pitchMappingFactor);
-            source.playbackRate.value = rate; 
+        if(source && audioCtx && isPlaying){ 
+            // 1. Calculate the rate based on the instantaneous velocity relative to base speed
+            // This is what gives the scratching/speed-up effect.
+            let targetRate = (velocity / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
+            
+            // 2. Clamp and set the rate
+            const finalRate = Math.max(0.01, targetRate);
+            source.playbackRate.value = finalRate;
         } 
         
         requestAnimationFrame(engine); 
@@ -504,13 +553,12 @@
         rpmMode = mode;
         updateTargetVelocity(); // Recalculate based on new RPM mode
 
-        // FIX: Add instantaneous velocity to make spin-up feel much faster
         if (mode !== 'off') {
             velocity = targetBaseVelocity * 0.4; // Jump to 40% speed immediately
-            startPlayback(); // Ensure audio is playing
+            startPlayback(); // Will restart from saved cue point
         } else {
             velocity = 0; 
-            stopAudio(); // Stop audio if mode is explicitly 'off'
+            stopAudio(); // Saves cue point and stops audio
         }
 
         // Update UI
@@ -527,24 +575,26 @@
 
     // --- Pitch Slider Logic ---
     pitchSlider.addEventListener('input', () => {
-        // Slider ranges from -15 to 15. Map this to a factor of 0.85 to 1.15 (+/- 15%)
-        const percentageChange = parseFloat(pitchSlider.value) / 100; // e.g., -0.15 to 0.15
+        const percentageChange = parseFloat(pitchSlider.value) / 100; 
         currentPitchFactor = 1.0 + percentageChange;
         
-        updateTargetVelocity(); // Update speed immediately
+        // If playing, restart the audio to apply the new base pitch immediately
+        if (isPlaying) {
+             // We don't need to call startPlayback if we simply set the rate to the new pitch factor
+             // Since the engine loop modulates the rate based on velocity, and velocity uses targetBaseVelocity,
+             // and targetBaseVelocity uses currentPitchFactor, it updates automatically.
+             updateTargetVelocity(); 
+        } else {
+             // If stopped, update target velocity for the next spin-up
+             updateTargetVelocity();
+        }
     });
 
 
     // --- Stop Button Logic ---
     stopBtn.addEventListener('click', () => {
-        // 1. Stop Logic
-        setRPM("off");
-        stopAudio();
-        // 2. Visual Reset (Immediate stop)
-        targetBaseVelocity = 0;
-        velocity = 0; 
-        currentRotation = 0; 
-        vinyl.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+        // setRPM("off") now correctly handles saving the cue point and stopping all motion.
+        setRPM("off"); 
     });
 
     // --- Zoom Button Logic ---
@@ -557,11 +607,10 @@
             turntableContainer.style.transform = "scale(1)";
             zoomBtn.classList.remove("zoom-active");
         }
-        // Re-calculate center after zoom transition
         setTimeout(updateCenter, 550);
     });
     
-    // Initial setup: ensure the 'off' mode is properly set when the script loads
+    // Initial setup
     setRPM("off");
 
 </script>
