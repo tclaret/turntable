@@ -353,7 +353,8 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    const returnStrength = 0.005; // Low friction/high inertia
+    // UPDATED: Decreased returnStrength from 0.005 to 0.002 for much faster snap-back to RPM.
+    const returnStrength = 0.002; 
     const dragSensitivity = 1.5; // Multiplier for drag input
     const pitchMappingFactor = 0.15; // How rotation velocity affects audio pitch
     let isZoomed = false;
@@ -380,14 +381,12 @@
     
     /**
      * Maps the visual rotation (in degrees) to an audio offset (in seconds).
-     * We assume one full 360-degree rotation of the vinyl represents one full loop 
-     * of the audio buffer.
+     * We use a constant mapping: 360 degrees = full duration.
      * @param {number} degrees - The total accumulated rotation in degrees.
      * @param {number} duration - The total duration of the audio buffer.
      * @returns {number} The audio time offset in seconds.
      */
     function rotationToAudioOffset(degrees, duration) {
-        // We use a constant mapping: 360 degrees = full duration.
         // The rotation is modulo 360 to stay within one loop rotation
         let offset = (degrees * duration / 360) % duration;
         // Handle negative offsets (reverse scratching)
@@ -524,6 +523,7 @@
     function engine(){ 
         if(!isDragging){ 
             // Gradually transition current velocity towards target velocity (spin up/down effect)
+            // The lower returnStrength is, the faster the vinyl returns to targetBaseVelocity.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
@@ -551,7 +551,7 @@
         updateTargetVelocity(); // Recalculate based on new RPM mode
 
         if (mode !== 'off') {
-            // UPDATED: Jump to 90% of target speed for much faster spin-up
+            // Jump to 90% of target speed for much faster spin-up
             velocity = targetBaseVelocity * 0.9; 
             startPlayback(); // Will restart from saved cue point
         } else {
