@@ -353,8 +353,8 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    // Decreased returnStrength for much faster snap-back to RPM (high-torque motor)
-    const returnStrength = 0.002; 
+    // UPDATED: Drastically reduced returnStrength for near-instant snap-back (high-torque motor feel).
+    const returnStrength = 0.0005; 
     const dragSensitivity = 1.5; // Multiplier for drag input
     const pitchMappingFactor = 0.15; // How rotation velocity affects audio pitch
     let isZoomed = false;
@@ -366,8 +366,10 @@
     
     // Base speed values (will be multiplied by pitch factor)
     let rpmMode = "off";
-    const RPM_BASE_SPEED = {"33":0.6, "45":0.9, "off":0};
-    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // Used as the baseline for rate calculation
+    // UPDATED: 33 RPM means 33 1/3 revolutions per minute. 
+    // Adjusted 45 RPM speed (0.81) to maintain the correct rotational ratio (45 / 33.333 = 1.35)
+    const RPM_BASE_SPEED = {"33": 0.6, "45": 0.81, "off": 0};
+    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 33 is the baseline for rate calculation
 
     // Audio Setup
     let audioCtx = null;
@@ -497,7 +499,7 @@
         // Target velocity is overridden by drag velocity during scratching
         targetBaseVelocity = dragDelta; 
         
-        // --- NEW LOGIC FOR TIGHT AUDIO/VISUAL SYNCHRONIZATION ---
+        // --- LOGIC FOR TIGHT AUDIO/VISUAL SYNCHRONIZATION ---
         if(isPlaying && buffer) {
             // 1. Calculate the new cue point based on the current visual rotation
             audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
