@@ -351,7 +351,10 @@
     let isDragging = false;
     let lastAngle = 0;
     let center = {x:0, y:0};
-    const returnStrength = 0.08;
+    // ADJUSTED: Drastically reduced return strength for increased inertia (simulates heavy platter/low friction)
+    const returnStrength = 0.005; 
+    const dragSensitivity = 1.5; // NEW: Multiplier for drag input for mobile screen responsiveness
+    const pitchMappingFactor = 0.15; // NEW: Adjusted how rotation velocity affects audio pitch
     let isZoomed = false;
 
     // Initial State
@@ -363,7 +366,7 @@
     let audioCtx = null;
     let buffer = null;
     let source = null;
-    const audioURL = "JB.mp3";
+    const audioURL = "JB.mp3"; // NOTE: This file must be available in the environment to load.
 
     function initAudio(){ 
         // Initialize AudioContext if not already done
@@ -445,10 +448,14 @@
         if(delta > 180) delta -= 360; 
         if(delta < -180) delta += 360; 
         lastAngle = ang; 
-        currentRotation += delta; 
-        velocity = delta; 
+        
+        // APPLIED: Multiply delta by dragSensitivity for more responsive scratching
+        const dragDelta = delta * dragSensitivity; 
+        
+        currentRotation += dragDelta; 
+        velocity = dragDelta; 
         // Target velocity is overridden by drag velocity during scratching
-        targetBaseVelocity = delta; 
+        targetBaseVelocity = dragDelta; 
     });
 
     vinyl.addEventListener("pointerup", () => { 
@@ -483,7 +490,8 @@
         // Pitch shift effect: link rotation speed (velocity) to music speed
         if(source && audioCtx){ 
             // Calculate playback rate (1 = normal speed, adjusted by manual/target velocity)
-            const rate = Math.max(0.01, Math.abs(1 + velocity * 0.05));
+            // APPLIED: Use new pitchMappingFactor for more extreme pitch shifts
+            const rate = Math.max(0.01, 1 + velocity * pitchMappingFactor);
             source.playbackRate.value = rate; 
         } 
         
