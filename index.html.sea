@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Turntable — Vintage Arrow RPM Selector</title>
-<link rel="icon" href="data:,">
+<html lang="en">
+  <head>
 
-<style>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Turntable — Vintage Arrow RPM Selector</title>
+    <link rel="icon" href="data:,">
+    <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
         height:100vh;
@@ -111,31 +112,28 @@
     #stop-button { top:20px; left:20px; background:#c0392b; }
     #zoom-button { top:20px; left:120px; background:#3498db; }
 </style>
-</head>
-<body>
-
-<div id="turntable">
-    <button id="stop-button">STOP</button>
-    <button id="zoom-button">ZOOM</button>
-
-    <div id="vinyl" style="transform: rotate(15838.6deg);"></div>
-
-    <div id="rpm-wrapper">
-        <img id="rpm-img" src="Turntable%20%E2%80%94%20Vintage%20Arrow%20RPM%20Selector_files/ChickenHead.png" style="transform: rotate(30deg) scale(0.3);">
-        <div id="rpm-controls">
-            <div class="rpm-choice" data-rpm="45"></div>
-            <div class="rpm-choice" data-rpm="off"></div>
-            <div class="rpm-choice active" data-rpm="33"></div>
+  </head>
+  <body>
+    <br>
+    <div id="turntable"> <button id="stop-button">STOP</button> <button
+        id="zoom-button">ZOOM</button>
+      <div id="rpm-wrapper" style="top: 488px; left: 21px;">
+        <div id="rpm-controls" style="left: -7px; width: 115px; top:
+          22px;">
+          <div class="rpm-choice" data-rpm="45"></div>
+          <div class="rpm-choice" data-rpm="off" align="left"><br>
+          </div>
+          <div class="rpm-choice" data-rpm="33"></div>
         </div>
-        <div class="rpm-labels">
-            <span>45</span>
-            <span>OFF</span>
-            <span>33</span>
-        </div>
+        <div class="rpm-labels"> <span>45 &nbsp; &nbsp; &nbsp; &nbsp;
+            &nbsp; &nbsp; &nbsp;</span> <span>OFF<img
+              src="img/ChickenHead.png" alt="t" width="50" height="89"></span>
+          <div class="rpm-choice" data-rpm="off" align="left"><br>
+          </div>
+          <span>33</span> </div>
+      </div>
     </div>
-</div>
-
-<script>
+    <script>
 const vinyl = document.getElementById("vinyl");
 const rpmImg = document.getElementById("rpm-img");
 const rpmChoices = document.querySelectorAll('.rpm-choice');
@@ -184,6 +182,5 @@ function setRPM(mode){
 
 rpmChoices.forEach(c=>c.addEventListener('click', ()=>{ setRPM(c.dataset.rpm); }));
 </script>
-
-
-</body></html>
+  </body>
+</html>

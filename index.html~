@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Turntable — Vintage Arrow RPM Selector</title>
-<link rel="icon" href="data:,">
+<link rel="icon" href="data:," />
 
 <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -57,7 +57,7 @@
     }
 
     #rpm-img {
-        width:100%;
+        width:40%;
         display:block;
         transform:rotate(0deg);
         transition: transform 0.2s ease;
@@ -95,7 +95,7 @@
         color:#fff;
         z-index:10;
     }
-<footer></footer>
+
     button {
         position:absolute;
         padding:10px 18px;
@@ -118,14 +118,14 @@
     <button id="stop-button">STOP</button>
     <button id="zoom-button">ZOOM</button>
 
-    <div id="vinyl" style="transform: rotate(15838.6deg);"></div>
+    <div id="vinyl"></div>
 
     <div id="rpm-wrapper">
-        <img id="rpm-img" src="Turntable%20%E2%80%94%20Vintage%20Arrow%20RPM%20Selector_files/ChickenHead.png" style="transform: rotate(30deg) scale(0.3);">
+        <img id="rpm-img" src="img/ChickenHead.png" />
         <div id="rpm-controls">
             <div class="rpm-choice" data-rpm="45"></div>
             <div class="rpm-choice" data-rpm="off"></div>
-            <div class="rpm-choice active" data-rpm="33"></div>
+            <div class="rpm-choice" data-rpm="33"></div>
         </div>
         <div class="rpm-labels">
             <span>45</span>
@@ -184,6 +184,5 @@ function setRPM(mode){
 
 rpmChoices.forEach(c=>c.addEventListener('click', ()=>{ setRPM(c.dataset.rpm); }));
 </script>
-
-
-</body></html>
+</body>
+</html>
