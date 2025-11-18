@@ -380,7 +380,6 @@
     
     /**
      * Maps the visual rotation (in degrees) to an audio offset (in seconds).
-     * This is the core function for maintaining the cue point across stops/starts.
      * We assume one full 360-degree rotation of the vinyl represents one full loop 
      * of the audio buffer.
      * @param {number} degrees - The total accumulated rotation in degrees.
@@ -475,7 +474,6 @@
         if(!isPlaying && rpmMode !== 'off') {
              await startPlayback(); 
         }
-        // If playing, we just start dragging; we don't restart the audio source.
         
         isDragging=true; 
         lastAngle=getAngle(e); 
@@ -536,7 +534,6 @@
         // Pitch shift effect: link rotation speed (velocity) to music speed
         if(source && audioCtx && isPlaying){ 
             // 1. Calculate the rate based on the instantaneous velocity relative to base speed
-            // This is what gives the scratching/speed-up effect.
             let targetRate = (velocity / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
             
             // 2. Clamp and set the rate
@@ -554,7 +551,8 @@
         updateTargetVelocity(); // Recalculate based on new RPM mode
 
         if (mode !== 'off') {
-            velocity = targetBaseVelocity * 0.4; // Jump to 40% speed immediately
+            // UPDATED: Jump to 90% of target speed for much faster spin-up
+            velocity = targetBaseVelocity * 0.9; 
             startPlayback(); // Will restart from saved cue point
         } else {
             velocity = 0; 
@@ -578,16 +576,8 @@
         const percentageChange = parseFloat(pitchSlider.value) / 100; 
         currentPitchFactor = 1.0 + percentageChange;
         
-        // If playing, restart the audio to apply the new base pitch immediately
-        if (isPlaying) {
-             // We don't need to call startPlayback if we simply set the rate to the new pitch factor
-             // Since the engine loop modulates the rate based on velocity, and velocity uses targetBaseVelocity,
-             // and targetBaseVelocity uses currentPitchFactor, it updates automatically.
-             updateTargetVelocity(); 
-        } else {
-             // If stopped, update target velocity for the next spin-up
-             updateTargetVelocity();
-        }
+        // Update physics calculations to account for the new pitch
+        updateTargetVelocity(); 
     });
 
 
