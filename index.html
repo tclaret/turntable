@@ -1,22 +1,28 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+<head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Turntable — Vintage Arrow RPM Selector</title>
+<title>Turntable — Vintage Selector</title>
 <link rel="icon" href="data:,">
 
 <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
         height:100vh;
-        background:#333;
+        background:#222;
         display:flex;
         justify-content:center;
         align-items:center;
-        font-family:Arial;
+        font-family: "Helvetica Neue", Arial, sans-serif;
         color:white;
         user-select:none;
+        overflow: hidden;
+    }
+
+    #turntable-container {
+        transition: transform 0.5s ease;
     }
 
     #turntable {
@@ -25,165 +31,531 @@
         height:80vmin;
         max-width:700px;
         max-height:700px;
-        background:#8b7966;
+        /* Updated: Solid dark wood color */
+        background: #634b32; 
         border-radius:12px;
-        box-shadow:0 0 40px rgba(0,0,0,0.7);
+        box-shadow:
+            inset 0 0 0 10px rgba(0,0,0,0.2),
+            0 20px 50px rgba(0,0,0,0.8);
         overflow:hidden;
     }
 
+    /* Metal Plate for buttons (Top-Left) */
+    .control-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        z-index: 50;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 10px;
+        border-radius: 8px;
+    }
+
+    /* Styled Vintage Buttons */
+    .vintage-btn {
+        padding: 8px 16px;
+        border: 1px solid #444;
+        border-radius: 4px;
+        background: linear-gradient(to bottom, #e0e0e0 0%, #b0b0b0 100%);
+        color: #333;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        box-shadow: 
+            0 3px 5px rgba(0,0,0,0.5),
+            inset 0 1px 0 rgba(255,255,255,0.8);
+        transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+    }
+
+    .vintage-btn:active {
+        transform: translateY(2px);
+        box-shadow: 
+            0 1px 2px rgba(0,0,0,0.5),
+            inset 0 2px 5px rgba(0,0,0,0.2);
+        background: linear-gradient(to bottom, #b0b0b0 0%, #999 100%);
+    }
+    
+    /* Specific button active states for logic indication */
+    .vintage-btn.zoom-active {
+        background: linear-gradient(to bottom, #aaddff 0%, #6699cc 100%);
+        box-shadow: inset 0 0 10px #3498db;
+    }
+
+    /* --- Pitch Slider Styling (Bottom-Right) --- */
+    #pitch-control {
+        position: absolute; 
+        bottom: 20px;       
+        right: 20px;        
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.4); 
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        z-index: 50;
+        width: 120px; /* Increased width to accommodate the scale */
+    }
+
+    #pitch-control label {
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #ddd;
+    }
+    
+    #pitch-slider {
+        -webkit-appearance: none;
+        width: 100px; /* Adjusted width */
+        height: 8px;
+        background: #333;
+        outline: none;
+        opacity: 0.9;
+        -webkit-transition: .2s;
+        transition: opacity .2s;
+        border-radius: 4px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
+    }
+
+    #pitch-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: #f0f0f0;
+        cursor: pointer;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5), inset 0 1px 0 #fff;
+    }
+
+    /* --- Pitch Scale Marks --- */
+    #pitch-scale {
+        position: relative;
+        width: 100px; /* Matches slider width */
+        height: 10px;
+        margin-top: 2px;
+        margin-bottom: 5px;
+    }
+
+    .pitch-mark {
+        position: absolute;
+        bottom: 0;
+        transform: translateX(-50%);
+        height: 5px;
+        width: 1px;
+        background: #ccc;
+    }
+
+    .pitch-label {
+        position: absolute;
+        bottom: 5px;
+        transform: translateX(-50%);
+        font-size: 8px;
+        color: #ccc;
+        font-weight: normal;
+        white-space: nowrap;
+    }
+
+    /* Long mark for the zero point */
+    .pitch-mark.zero {
+        height: 8px;
+        background: #00ff00; /* Green highlight for zero pitch */
+    }
+
+
+    /* --- Vinyl Restoration using original local path (img/DISC.png) --- */
     #vinyl {
         position:absolute;
-        top:5%; left:5%;
-        width:90%; height:90%;
+        top:50%; left:50%;
+        transform: translate(-50%, -50%);
+        width:85%; height:85%;
         border-radius:50%;
-        background-image:url('img/DISC.png');
-        background-size:cover;
-        background-position:center;
-        transform:rotate(0deg);
+        
+        background-image: url('img/DISC.png');
+        background-size: cover;
+        background-position: center;
+
         cursor:grab;
         will-change:transform;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     }
     #vinyl:active { cursor:grabbing; }
 
+    /* RPM Section Wrapper (Bottom-Left) */
     #rpm-wrapper {
         position:absolute;
-        bottom:2%;
-        left:2%;
-        width:auto;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
+        bottom: 5%;
+        left: 5%;
+        width: auto;
+        display: flex;
+        flex-direction: column; /* Vertical Stack */
+        align-items: center;     /* Center everything horizontally */
+        gap: 8px;                /* Space between Labels, Dots, Image */
         z-index:45;
+        background: rgba(0,0,0,0.2); 
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
-    #rpm-img {
-        width:100%;
-        display:block;
-        transform:rotate(0deg);
-        transition: transform 0.2s ease;
-        margin-bottom:5px;
-        z-index:10;
-    }
-
-    #rpm-controls {
-        display:flex;
-        justify-content:space-between;
-        width:70px; /* narrower control */
-        position:absolute;
-        top:0;
-        left:0;
-        z-index:20;
-    }
-
-    .rpm-choice {
-        width:15px;
-        height:15px;
-        border-radius:50%;
-        background:rgba(255,255,255,0.3);
-        cursor:pointer;
-        transition: background 0.2s;
-    }
-
-    .rpm-choice.active { background:#1abc9c; }
-
+    /* 1. Labels on TOP (No Change) */
     .rpm-labels {
         display:flex;
         justify-content:space-between;
-        width:100px; /* narrower label width */
-        margin-top:3px;
-        font-size:12px;
-        color:#fff;
-        z-index:10;
+        width: 90px; 
+        font-size: 10px;
+        font-family: sans-serif;
+        font-weight: bold;
+        color: #d0d0d0;
+        text-shadow: 0 1px 2px black;
+        pointer-events: none;
     }
-<footer></footer>
-    button {
-        position:absolute;
-        padding:10px 18px;
-        border:none;
-        border-radius:8px;
-        color:white;
-        font-weight:bold;
-        cursor:pointer;
-        box-shadow:0 4px 12px rgba(0,0,0,0.45);
-        z-index:50;
+    
+    .rpm-labels span {
+        width: 25px;
+        text-align: center;
     }
 
-    #stop-button { top:20px; left:20px; background:#c0392b; }
-    #zoom-button { top:20px; left:120px; background:#3498db; }
+    /* 2. Dots in MIDDLE (No Change) */
+    #rpm-controls {
+        display:flex;
+        justify-content:space-between;
+        width: 90px; 
+        position: relative;
+    }
+
+    .rpm-choice {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #444;
+        border: 2px solid #222;
+        cursor: pointer;
+        box-shadow: inset 0 2px 3px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.2);
+        transition: background 0.2s;
+        margin: 0 auto; 
+    }
+
+    .rpm-choice:hover { background: #666; }
+    
+    /* Light up the LED/Dot when active */
+    .rpm-choice.active { 
+        background: #00ff00; 
+        box-shadow: 0 0 10px #00ff00, inset 0 2px 3px rgba(0,0,0,0.5);
+        border-color: #003300;
+    }
+
+    /* 3. Image at BOTTOM */
+    #rpm-img {
+        width: 30px; 
+        height: auto;
+        display: block;
+        transform-origin: center center;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        filter: drop-shadow(0 5px 5px rgba(0,0,0,0.7));
+    }
+
 </style>
 </head>
 <body>
 
-<div id="turntable">
-    <button id="stop-button">STOP</button>
-    <button id="zoom-button">ZOOM</button>
-
-    <div id="vinyl" style="transform: rotate(15838.6deg);"></div>
-
-    <div id="rpm-wrapper">
-        <img id="rpm-img" src="Turntable%20%E2%80%94%20Vintage%20Arrow%20RPM%20Selector_files/ChickenHead.png" style="transform: rotate(30deg) scale(0.3);">
-        <div id="rpm-controls">
-            <div class="rpm-choice" data-rpm="45"></div>
-            <div class="rpm-choice" data-rpm="off"></div>
-            <div class="rpm-choice active" data-rpm="33"></div>
+<div id="turntable-container">
+    <div id="turntable">
+        
+        <!-- Control Panel (Top-Left) -->
+        <div class="control-panel">
+            <button id="stop-button" class="vintage-btn">Stop</button>
+            <button id="zoom-button" class="vintage-btn">Zoom</button>
         </div>
-        <div class="rpm-labels">
-            <span>45</span>
-            <span>OFF</span>
-            <span>33</span>
+        
+        <!-- Pitch Control Slider (Bottom-Right) with Scale -->
+        <div id="pitch-control">
+            <label for="pitch-slider">Pitch</label>
+            <input type="range" min="-15" max="15" value="0" id="pitch-slider">
+            <div id="pitch-scale">
+                <!-- Scale Marks for -15% to +15% range -->
+                
+                <!-- -15% -->
+                <span class="pitch-mark" style="left:0%;"></span>
+                <span class="pitch-label" style="left:0%;">+15%</span>
+
+                <!-- -10% -->
+                <span class="pitch-mark" style="left:16.67%;"></span>
+                <span class="pitch-label" style="left:16.67%;">+10</span>
+
+                <!-- 0% -->
+                <span class="pitch-mark zero" style="left:50%;"></span>
+                <span class="pitch-label" style="left:50%; top: 1px;">0</span>
+
+                <!-- +10% -->
+                <span class="pitch-mark" style="left:83.33%;"></span>
+                <span class="pitch-label" style="left:83.33%;">-10</span>
+
+                <!-- +15% -->
+                <span class="pitch-mark" style="left:100%;"></span>
+                <span class="pitch-label" style="left:100%;">-15%</span>
+            </div>
+        </div>
+
+
+        <!-- The vinyl disc uses the local img/DISC.png path -->
+        <div id="vinyl" style="transform: rotate(0deg);">
+            <!-- Content removed as the background image now represents the disc. -->
+        </div>
+
+        <!-- RPM Control (Bottom-Left) -->
+        <div id="rpm-wrapper">
+            <!-- 1. Labels Top (Inverted: 33 - OFF - 45) -->
+            <div class="rpm-labels">
+                <span>33</span>
+                <span>OFF</span>
+                <span>45</span>
+            </div>
+
+            <!-- 2. Controls Middle -->
+            <div id="rpm-controls">
+                <div class="rpm-choice" data-rpm="33" title="33 RPM"></div>
+                <div class="rpm-choice active" data-rpm="off" title="Stop"></div>
+                <div class="rpm-choice" data-rpm="45" title="45 RPM"></div>
+            </div>
+
+            <!-- 3. Image Bottom (Knob now uses the local img/ChickenHead.png path and is 30px wide) -->
+            <img id="rpm-img" 
+                 src="img/ChickenHead.png" 
+                 alt="RPM Knob"
+                 style="transform: rotate(0deg);">
         </div>
     </div>
 </div>
 
 <script>
-const vinyl = document.getElementById("vinyl");
-const rpmImg = document.getElementById("rpm-img");
-const rpmChoices = document.querySelectorAll('.rpm-choice');
+    const vinyl = document.getElementById("vinyl");
+    const rpmImg = document.getElementById("rpm-img");
+    const rpmChoices = document.querySelectorAll('.rpm-choice');
+    const stopBtn = document.getElementById('stop-button');
+    const zoomBtn = document.getElementById('zoom-button');
+    const turntableContainer = document.getElementById('turntable-container');
+    const pitchSlider = document.getElementById('pitch-slider');
 
-let currentRotation = 0;
-let velocity = 0;
-let targetVelocity = 0;
-let isDragging = false;
-let lastAngle = 0;
-let center = {x:0, y:0};
-const returnStrength = 0.08;
+    let currentRotation = 0;
+    let velocity = 0;
+    let targetBaseVelocity = 0; // Speed set by 33/45 button
+    let currentPitchFactor = 1.0; // Speed modulation from slider
+    let isDragging = false;
+    let lastAngle = 0;
+    let center = {x:0, y:0};
+    const returnStrength = 0.08;
+    let isZoomed = false;
 
-let rpmMode = "off";
-const RPM_SPEED = {"33":0.6,"45":0.9,"off":0};
+    // Initial State
+    let rpmMode = "off";
+    // Base speed values (will be multiplied by pitch factor)
+    const RPM_BASE_SPEED = {"33":0.6, "45":0.9, "off":0};
 
-let audioCtx = null;
-let buffer = null;
-let source = null;
-const audioURL = "JB.mp3";
+    // Audio Setup
+    let audioCtx = null;
+    let buffer = null;
+    let source = null;
+    const audioURL = "JB.mp3";
 
-function initAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
-async function loadAudio(){ initAudio(); const res = await fetch(audioURL); const arr = await res.arrayBuffer(); buffer = await audioCtx.decodeAudioData(arr); }
-loadAudio();
-function startAudio(){ if(!buffer) return; if(source) source.stop(); source = audioCtx.createBufferSource(); source.buffer = buffer; source.loop = true; source.playbackRate.value = 1; source.connect(audioCtx.destination); source.start(); }
+    function initAudio(){ 
+        // Initialize AudioContext if not already done
+        if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); 
+    }
 
-function updateCenter(){ const r = vinyl.getBoundingClientRect(); center.x = r.left + r.width/2; center.y = r.top + r.height/2; }
-updateCenter(); window.addEventListener("resize", updateCenter);
-function getAngle(e){ return Math.atan2(e.clientY - center.y, e.clientX - center.x) * 180 / Math.PI; }
+    /*
+     * ASYNC function to ensure AudioContext is resumed and audio buffer is loaded, 
+     * which must happen after a user gesture.
+     */
+    async function startPlayback() {
+        initAudio();
+        // Resume context on user action (key fix for the error)
+        if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+        }
 
-vinyl.addEventListener("pointerdown", e => { initAudio(); audioCtx.resume(); startAudio(); isDragging=true; lastAngle=getAngle(e); vinyl.setPointerCapture(e.pointerId); });
-vinyl.addEventListener("pointermove", e => { if(!isDragging) return; const ang=getAngle(e); let delta=ang-lastAngle; if(delta>180) delta-=360; if(delta<-180) delta+=360; lastAngle=ang; currentRotation+=delta; velocity=delta; targetVelocity=delta; });
-vinyl.addEventListener("pointerup", ()=>{ isDragging=false; targetVelocity=RPM_SPEED[rpmMode]; });
+        // Load buffer if not already loaded (prevents error if called multiple times)
+        if(!buffer) {
+            try {
+                // IMPORTANT: The 'JB.mp3' file must be uploaded alongside the HTML for this to work.
+                const res = await fetch(audioURL); 
+                if(!res.ok) throw new Error("Audio file not found: " + audioURL);
+                const arr = await res.arrayBuffer(); 
+                buffer = await audioCtx.decodeAudioData(arr); 
+            } catch(e) {
+                console.warn("Audio load or decode failed. Ensure JB.mp3 is available:", e);
+                return; // Stop if load failed
+            }
+        }
+        
+        // Start playback if not already running (or restart)
+        if(source) {
+            try { source.stop(); } catch(e){}
+        }
+        source = audioCtx.createBufferSource(); 
+        source.buffer = buffer; 
+        source.loop = true; 
+        // Initial playback rate is 1, adjusted in engine loop
+        source.playbackRate.value = 1; 
+        source.connect(audioCtx.destination); 
+        source.start(); 
+    }
 
-function engine(){ if(!isDragging){ velocity += (targetVelocity - velocity)*returnStrength; } currentRotation+=velocity; vinyl.style.transform=`rotate(${currentRotation}deg)`; if(source && audioCtx){ source.playbackRate.value=Math.max(0.01,1+velocity*0.02); } requestAnimationFrame(engine); }
-engine();
+    function stopAudio() {
+        if(source) {
+            try { source.stop(); } catch(e){}
+            source = null;
+        }
+    }
 
-function setRPM(mode){
-    rpmMode = mode;
-    targetVelocity = RPM_SPEED[mode];
-    rpmChoices.forEach(c=>c.classList.remove('active'));
-    document.querySelector(`.rpm-choice[data-rpm='${mode}']`).classList.add('active');
-    if(mode=="45") rpmImg.style.transform="rotate(-30deg) scale(0.3)";
-    else if(mode=="33") rpmImg.style.transform="rotate(30deg) scale(0.3)";
-    else rpmImg.style.transform="rotate(0deg) scale(0.3)";
-}
+    // --- Physics Engine ---
+    function updateCenter(){ 
+        const r = vinyl.getBoundingClientRect(); 
+        center.x = r.left + r.width/2; 
+        center.y = r.top + r.height/2; 
+    }
+    updateCenter(); 
+    window.addEventListener("resize", updateCenter);
 
-rpmChoices.forEach(c=>c.addEventListener('click', ()=>{ setRPM(c.dataset.rpm); }));
+    function getAngle(e){ 
+        return Math.atan2(e.clientY - center.y, e.clientX - center.x) * 180 / Math.PI; 
+    }
+
+    vinyl.addEventListener("pointerdown", async e => { 
+        // Start playback immediately on drag down
+        await startPlayback();
+        
+        isDragging=true; 
+        lastAngle=getAngle(e); 
+        vinyl.setPointerCapture(e.pointerId); 
+        vinyl.style.cursor = "grabbing";
+    });
+
+    vinyl.addEventListener("pointermove", e => { 
+        if(!isDragging) return; 
+        const ang = getAngle(e); 
+        let delta = ang - lastAngle; 
+        if(delta > 180) delta -= 360; 
+        if(delta < -180) delta += 360; 
+        lastAngle = ang; 
+        currentRotation += delta; 
+        velocity = delta; 
+        // Target velocity is overridden by drag velocity during scratching
+        targetBaseVelocity = delta; 
+    });
+
+    vinyl.addEventListener("pointerup", () => { 
+        isDragging = false; 
+        // Revert target velocity to the calculated RPM speed, modulated by pitch
+        updateTargetVelocity(); 
+        vinyl.style.cursor = "grab";
+        
+        // If the mode is off, audio stops after letting go (no persistent drag velocity)
+        if(rpmMode === 'off') stopAudio(); 
+    });
+    
+    // --- Target Velocity Calculation ---
+    function updateTargetVelocity() {
+        // Only update if not currently scratching
+        if (!isDragging) {
+             // Target velocity is the RPM base speed multiplied by the pitch factor
+            targetBaseVelocity = RPM_BASE_SPEED[rpmMode] * currentPitchFactor;
+        }
+    }
+
+    function engine(){ 
+        if(!isDragging){ 
+            // Gradually transition current velocity towards target velocity (spin up/down effect)
+            velocity += (targetBaseVelocity - velocity) * returnStrength; 
+        } 
+        
+        currentRotation += velocity; 
+        // Apply rotation to the vinyl image element
+        vinyl.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`; 
+        
+        // Pitch shift effect: link rotation speed (velocity) to music speed
+        if(source && audioCtx){ 
+            // Calculate playback rate (1 = normal speed, adjusted by manual/target velocity)
+            const rate = Math.max(0.01, Math.abs(1 + velocity * 0.05));
+            source.playbackRate.value = rate; 
+        } 
+        
+        requestAnimationFrame(engine); 
+    }
+    engine();
+
+    // --- RPM Control Logic ---
+    function setRPM(mode){
+        rpmMode = mode;
+        updateTargetVelocity(); // Recalculate based on new RPM mode
+
+        // FIX: Add instantaneous velocity to make spin-up feel much faster
+        if (mode !== 'off') {
+            velocity = targetBaseVelocity * 0.4; // Jump to 40% speed immediately
+            startPlayback(); // Ensure audio is playing
+        } else {
+            velocity = 0; 
+            stopAudio(); // Stop audio if mode is explicitly 'off'
+        }
+
+        // Update UI
+        rpmChoices.forEach(c => c.classList.remove('active'));
+        document.querySelector(`.rpm-choice[data-rpm='${mode}']`).classList.add('active');
+        
+        // Rotate Knob Image 
+        if(mode === "33") rpmImg.style.transform = "rotate(-30deg)";
+        else if(mode === "45") rpmImg.style.transform = "rotate(30deg)";
+        else rpmImg.style.transform = "rotate(0deg)";
+    }
+
+    rpmChoices.forEach(c => c.addEventListener('click', () => { setRPM(c.dataset.rpm); }));
+
+    // --- Pitch Slider Logic ---
+    pitchSlider.addEventListener('input', () => {
+        // Slider ranges from -15 to 15. Map this to a factor of 0.85 to 1.15 (+/- 15%)
+        const percentageChange = parseFloat(pitchSlider.value) / 100; // e.g., -0.15 to 0.15
+        currentPitchFactor = 1.0 + percentageChange;
+        
+        updateTargetVelocity(); // Update speed immediately
+    });
+
+
+    // --- Stop Button Logic ---
+    stopBtn.addEventListener('click', () => {
+        // 1. Stop Logic
+        setRPM("off");
+        stopAudio();
+        // 2. Visual Reset (Immediate stop)
+        targetBaseVelocity = 0;
+        velocity = 0; 
+        currentRotation = 0; 
+        vinyl.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+    });
+
+    // --- Zoom Button Logic ---
+    zoomBtn.addEventListener('click', () => {
+        isZoomed = !isZoomed;
+        if(isZoomed) {
+            turntableContainer.style.transform = "scale(1.5)";
+            zoomBtn.classList.add("zoom-active");
+        } else {
+            turntableContainer.style.transform = "scale(1)";
+            zoomBtn.classList.remove("zoom-active");
+        }
+        // Re-calculate center after zoom transition
+        setTimeout(updateCenter, 550);
+    });
+    
+    // Initial setup: ensure the 'off' mode is properly set when the script loads
+    setRPM("off");
+
 </script>
-
-
-</body></html>
+</body>
+</html>
