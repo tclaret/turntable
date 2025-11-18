@@ -353,7 +353,7 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    // UPDATED: Decreased returnStrength from 0.005 to 0.002 for much faster snap-back to RPM.
+    // Decreased returnStrength for much faster snap-back to RPM (high-torque motor)
     const returnStrength = 0.002; 
     const dragSensitivity = 1.5; // Multiplier for drag input
     const pitchMappingFactor = 0.15; // How rotation velocity affects audio pitch
@@ -399,7 +399,8 @@
 
     /*
      * ASYNC function to load audio and start playback from a specific offset.
-     * This is called when transitioning from OFF to 33/45.
+     * This function now acts as the central mechanism for starting/restarting audio
+     * at a precise cue point.
      */
     async function startPlayback() {
         initAudio();
@@ -433,7 +434,7 @@
         source.playbackRate.value = 1.0 * currentPitchFactor; 
         source.connect(audioCtx.destination); 
         
-        // Start playback from the current cue point
+        // Start playback from the current cue point (audioCuePointSeconds)
         source.start(0, audioCuePointSeconds); 
         isPlaying = true;
     }
@@ -482,6 +483,7 @@
 
     vinyl.addEventListener("pointermove", e => { 
         if(!isDragging) return; 
+        
         const ang = getAngle(e); 
         let delta = ang - lastAngle; 
         if(delta > 180) delta -= 360; 
@@ -494,6 +496,23 @@
         velocity = dragDelta; 
         // Target velocity is overridden by drag velocity during scratching
         targetBaseVelocity = dragDelta; 
+        
+        // --- NEW LOGIC FOR TIGHT AUDIO/VISUAL SYNCHRONIZATION ---
+        if(isPlaying && buffer) {
+            // 1. Calculate the new cue point based on the current visual rotation
+            audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
+            
+            // 2. Stop the current source
+            if(source) {
+                try { source.stop(); } catch(e){}
+                source = null;
+                isPlaying = false;
+            }
+            
+            // 3. Immediately restart the audio from the new cue point. 
+            // This forces the audio phase to match the visual disc rotation.
+            startPlayback(); 
+        }
     });
 
     vinyl.addEventListener("pointerup", () => { 
@@ -523,7 +542,6 @@
     function engine(){ 
         if(!isDragging){ 
             // Gradually transition current velocity towards target velocity (spin up/down effect)
-            // The lower returnStrength is, the faster the vinyl returns to targetBaseVelocity.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
