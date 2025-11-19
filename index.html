@@ -13,6 +13,7 @@
         height:100vh;
         background:#222;
         display:flex;
+        flex-direction: column;
         justify-content:center;
         align-items:center;
         font-family: "Helvetica Neue", Arial, sans-serif;
@@ -57,7 +58,7 @@
         display: none; /* Caché par défaut */
     }
 
-    /* Plaque métallique pour les boutons (Haut-Gauche) */
+    /* Panneau de contrôle général (Haut-Gauche) */
     .control-panel {
         position: absolute;
         top: 20px;
@@ -69,6 +70,40 @@
         background: rgba(0, 0, 0, 0.4);
         padding: 10px;
         border-radius: 8px;
+    }
+    
+    /* Panneau des fonctionnalités Gemini (Haut-Droit) */
+    #gemini-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 50;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 10px;
+        border-radius: 8px;
+        align-items: stretch;
+    }
+
+    /* Boîte de résultats de l'analyse */
+    #analysis-box {
+        position: absolute;
+        top: 100px; /* Sous le panneau Gemini */
+        right: 20px;
+        width: 250px;
+        max-height: 200px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid #00ff00;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 14px;
+        line-height: 1.4;
+        z-index: 50;
+        box-shadow: 0 0 15px rgba(0,255,0,0.3);
+        display: none;
+        overflow-y: auto;
     }
 
     /* Boutons de style vintage */
@@ -103,6 +138,36 @@
         background: linear-gradient(to bottom, #aaddff 0%, #6699cc 100%);
         box-shadow: inset 0 0 10px #3498db;
     }
+    
+    /* Bouton pour les fonctions Gemini */
+    .gemini-btn {
+        background: linear-gradient(to bottom, #77b300 0%, #446600 100%);
+        color: white;
+        border-color: #335500;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    .gemini-btn:active {
+        background: linear-gradient(to bottom, #446600 0%, #2a3e00 100%);
+    }
+
+    /* Indicateur de chargement pour l'analyse */
+    .loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #00ff00;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+        display: none;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
 
     /* --- Contrôle de la vitesse (Pitch) (Bas-Droit) --- */
     #pitch-control {
@@ -195,7 +260,8 @@
         width:85%; height:85%;
         border-radius:50%;
         
-        background-image: url('img/DISC.png');
+        /* URL D'IMAGE CORRIGÉE */
+        background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
         background-size: cover;
         background-position: center;
 
@@ -295,6 +361,22 @@
             <button id="zoom-button" class="vintage-btn">Zoom</button>
         </div>
         
+        <!-- Panneau des fonctionnalités Gemini (Haut-Droit) -->
+        <div id="gemini-panel">
+            <button id="analysis-button" class="vintage-btn gemini-btn">
+                <div class="loading-spinner" id="analysis-spinner"></div>
+                Analyse de Piste ✨
+            </button>
+            <button id="tts-button" class="vintage-btn gemini-btn">
+                Synthèse Vocale (TTS) ✨
+            </button>
+        </div>
+        
+        <!-- Boîte de résultats de l'analyse -->
+        <div id="analysis-box">
+            <!-- Le contenu sera inséré ici par JavaScript -->
+        </div>
+
         <!-- Contrôle de la vitesse (Pitch) (Bas-Droit) -->
         <div id="pitch-control">
             <label for="pitch-slider">Pitch</label>
@@ -348,7 +430,8 @@
 
             <!-- 3. Image du bouton en bas -->
             <img id="rpm-img" 
-                 src="img/ChickenHead.png" 
+                 /* URL D'IMAGE CORRIGÉE */
+                 src="https://tclaret.github.io/turntable/img/ChickenHead.png" 
                  alt="Bouton RPM"
                  style="transform: rotate(0deg);">
         </div>
@@ -364,6 +447,13 @@
     const turntableContainer = document.getElementById('turntable-container');
     const pitchSlider = document.getElementById('pitch-slider');
     const audioErrorDiv = document.getElementById('audio-error'); 
+    
+    // Nouveaux éléments pour Gemini
+    const analysisBtn = document.getElementById('analysis-button');
+    const analysisBox = document.getElementById('analysis-box');
+    const analysisSpinner = document.getElementById('analysis-spinner');
+    const ttsBtn = document.getElementById('tts-button');
+
 
     let currentRotation = 0;
     let velocity = 0;
@@ -395,7 +485,13 @@
     let audioCtx = null;
     let buffer = null;
     let source = null;
-    const audioURL = "JB.mp3"; 
+    // Piste simulée pour l'analyse
+    const TRACK_TITLE = "James Brown - Get Up (I Feel Like Being a) Sex Machine";
+    // URL AUDIO CORRIGÉE
+    const audioURL = "https://tclaret.github.io/turntable/JB.mp3"; 
+
+    // Clé API fournie par l'environnement
+    const apiKey = ""; 
 
     function initAudio(){ 
         if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); 
@@ -425,6 +521,7 @@
         if(!buffer) {
             try {
                 const res = await fetch(audioURL); 
+                // Vérifier si la réponse est un succès HTTP (statut 200-299)
                 if(!res.ok) throw new Error("Audio file not found: " + audioURL);
                 const arr = await res.arrayBuffer(); 
                 buffer = await audioCtx.decodeAudioData(arr); 
@@ -432,6 +529,8 @@
                 audioErrorDiv.style.display = 'none'; 
             } catch(e) {
                 console.error("Échec du chargement ou du décodage audio:", e);
+                // Mettre à jour le message d'erreur avec l'URL complète
+                audioErrorDiv.innerHTML = `ERREUR AUDIO : Fichier <br> ${audioURL} <br> introuvable.`; 
                 audioErrorDiv.style.display = 'block'; 
                 return; 
             }
@@ -493,8 +592,7 @@
     vinyl.addEventListener("pointerdown", async e => { 
         const angle = getAngle(e);
         
-        // NOUVELLE VÉRIFICATION: Zone de Scratch Côté Gauche (90° à 180° ET -180° à -90°)
-        // Cela couvre toute la moitié gauche du vinyle.
+        // Zone de Scratch Côté Gauche (90° à 180° ET -180° à -90°)
         const isInScratchZone = (angle >= 90) || (angle <= -90);
 
         if (isInScratchZone) {
@@ -648,6 +746,203 @@
     
     // Initialisation
     setRPM("off");
+
+
+    /* * --- GESTION DES APPELS GEMINI --- 
+     */
+
+    // Fonction utilitaire pour la gestion des erreurs et la réessai (Backoff)
+    async function fetchWithRetry(url, options, maxRetries = 5) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (i === maxRetries - 1) throw error;
+                const delay = Math.pow(2, i) * 1000; // Délai exponentiel
+                await new Promise(resolve => setTimeout(resolve, delay));
+                console.warn(`Tentative échouée ${i + 1}. Nouvelle tentative dans ${delay / 1000}s...`);
+            }
+        }
+    }
+
+
+    // --- 1. FONCTION D'ANALYSE DE PISTE (LLM + Grounding) ---
+    analysisBtn.addEventListener('click', callGeminiAnalysis);
+
+    async function callGeminiAnalysis() {
+        analysisBtn.disabled = true;
+        analysisSpinner.style.display = 'block';
+        analysisBox.style.display = 'block';
+        analysisBox.innerHTML = '<p>Analyse de la piste... 🎶</p>';
+
+        const userQuery = `Fournis une courte anecdote historique et un fait d'importance de la chanson funk "${TRACK_TITLE}" en trois phrases au maximum.`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            // Activation de la recherche Google pour obtenir des informations factuelles
+            tools: [{ "google_search": {} }],
+            systemInstruction: {
+                parts: [{ text: "Agis comme un expert en histoire de la musique et en analyse de vinyles. Rédige ta réponse en français et dans un style enthousiaste, sans introduction ni conclusion." }]
+            },
+        };
+
+        try {
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Impossible d'analyser la piste.";
+            
+            analysisBox.innerHTML = `<strong>Analyse de ${TRACK_TITLE}:</strong><br>${text}`;
+
+            // Optionnel: Affichage des sources
+            const groundingMetadata = result.candidates?.[0]?.groundingMetadata;
+            if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                analysisBox.innerHTML += `<div style="margin-top: 10px; font-size: 10px; opacity: 0.7;">Sources (recherche Gemini)</div>`;
+            }
+
+        } catch (error) {
+            console.error("Erreur lors de l'appel Gemini (Analyse):", error);
+            analysisBox.innerHTML = '<p style="color:red;">Erreur: Impossible de contacter le serveur d\'analyse.</p>';
+        } finally {
+            analysisBtn.disabled = false;
+            analysisSpinner.style.display = 'none';
+        }
+    }
+
+
+    // --- 2. FONCTION DE SYNTHÈSE VOCALE (TTS) ---
+    ttsBtn.addEventListener('click', callGeminiTTS);
+    
+    // Fonction utilitaire pour convertir PCM en WAV
+    function pcmToWav(pcm16, sampleRate) {
+        const numChannels = 1;
+        const bitsPerSample = 16;
+        const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+        const blockAlign = numChannels * (bitsPerSample / 8);
+        const dataSize = pcm16.byteLength;
+        
+        // FIX: Calcul correct de la taille totale du fichier (44 octets d'en-tête + taille des données)
+        const totalSize = 44 + dataSize; 
+        const riffChunkSize = totalSize - 8; // Taille totale moins 'RIFF' (4) et 'ChunkSize' (4)
+
+        const buffer = new ArrayBuffer(totalSize);
+        const view = new DataView(buffer);
+
+        // RIFF chunk
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, riffChunkSize, true); 
+        writeString(view, 8, 'WAVE');
+
+        // FMT chunk
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true); // Chunk size
+        view.setUint16(20, 1, true);  // Compression code (PCM)
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, byteRate, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitsPerSample, true);
+
+        // DATA chunk
+        writeString(view, 36, 'data');
+        view.setUint32(40, dataSize, true);
+
+        // PCM data
+        let offset = 44;
+        for (let i = 0; i < pcm16.length; i++) {
+            // Utiliser setInt16 pour les données 16-bit signées
+            view.setInt16(offset, pcm16[i], true);
+            offset += 2;
+        }
+
+        return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    }
+    
+    function base64ToArrayBuffer(base64) {
+        const binaryString = atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    async function callGeminiTTS() {
+        ttsBtn.disabled = true;
+
+        const currentRpm = rpmMode === 'off' ? 'à l\'arrêt' : `${rpmMode} tours par minute`;
+        const pitchValue = parseFloat(pitchSlider.value).toFixed(1);
+        const pitchText = pitchValue === "0.0" ? "zéro pour cent" : `${pitchValue} pour cent`;
+        
+        const ttsPrompt = `Dites avec une voix de commentateur radio enthousiaste: "Le système est actuellement réglé sur ${currentRpm}, avec un ajustement de pitch de ${pitchText}!"`;
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+        
+        const payload = {
+            contents: [{ parts: [{ text: ttsPrompt }] }],
+            generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: "Puck" } // Voix entraînante
+                    }
+                }
+            },
+        };
+
+        try {
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            const part = result?.candidates?.[0]?.content?.parts?.[0];
+            const audioData = part?.inlineData?.data;
+            const mimeType = part?.inlineData?.mimeType;
+
+            if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+                // Extraire le sample rate du mimeType (e.g., audio/L16;rate=24000)
+                const rateMatch = mimeType.match(/rate=(\d+)/);
+                const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                
+                const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                // L'API retourne du PCM 16-bit signé (Int16Array)
+                const pcm16 = new Int16Array(pcmDataBuffer); 
+                
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+                const audioUrl = URL.createObjectURL(wavBlob);
+                
+                // Jouer l'audio
+                const audio = new Audio(audioUrl);
+                audio.play();
+
+            } else {
+                console.error("Erreur TTS: Données audio manquantes ou format incorrect.");
+            }
+        } catch (error) {
+            console.error("Erreur lors de l'appel Gemini (TTS):", error);
+        } finally {
+            ttsBtn.disabled = false;
+        }
+    }
 
 </script>
 </body>
