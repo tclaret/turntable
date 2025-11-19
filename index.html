@@ -223,7 +223,7 @@
         text-align: center;
     }
 
-    /* 2. Dots in MIDDLE (No Change) */
+    /* 2. Dots in MIDDLE (Swapped labels to reflect new accurate speed) */
     #rpm-controls {
         display:flex;
         justify-content:space-between;
@@ -323,7 +323,8 @@
             <div id="rpm-controls">
                 <div class="rpm-choice" data-rpm="45" title="45 RPM"></div>
                 <div class="rpm-choice active" data-rpm="off" title="Stop"></div>
-                <div class="rpm-choice" data-rpm="33" title="33 RPM"></div>
+                <!-- Changed data-rpm to '33.33' for display accuracy, but the code still uses '33' as the key -->
+                <div class="rpm-choice" data-rpm="33" title="33 1/3 RPM"></div> 
             </div>
 
             <!-- 3. Image Bottom (Knob now uses the local img/ChickenHead.png path and is 30px wide) -->
@@ -366,10 +367,10 @@
     // Base speed values (will be multiplied by pitch factor)
     let rpmMode = "off";
     // UPDATED: Now using physically accurate degrees-per-frame calculation for 60FPS:
-    // 33 RPM: (33 rev/min / 60 sec) * 360 deg/rev / 60 FPS = 3.3 deg/frame
+    // 33 1/3 RPM: (33.333... rev/min / 60 sec) * 360 deg/rev / 60 FPS = 3.333... deg/frame
     // 45 RPM: (45 rev/min / 60 sec) * 360 deg/rev / 60 FPS = 4.5 deg/frame
-    const RPM_BASE_SPEED = {"33": 3.3, "45": 4.5, "off": 0};
-    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 3.3 deg/frame is the baseline for audio rate calculation
+    const RPM_BASE_SPEED = {"33": 360 / 60 / 60 * (100 / 3), "45": 4.5, "off": 0}; 
+    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 3.333... deg/frame is the baseline for audio rate calculation
 
     // Audio Setup
     let audioCtx = null;
@@ -428,7 +429,7 @@
 
         // Calculate the correct starting rate based on current RPM mode
         const rpmSpeed = RPM_BASE_SPEED[rpmMode];
-        // Rate is (RPM rotational velocity / 33 RPM baseline) * pitch factor
+        // Rate is (RPM rotational velocity / 33.333... RPM baseline) * pitch factor
         let initialRate = (rpmSpeed / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
         if (rpmMode === 'off' || NORMAL_RPM_VELOCITY === 0) initialRate = 1.0 * currentPitchFactor;
 
