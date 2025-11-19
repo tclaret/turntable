@@ -3,9 +3,11 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Platine vinyle — Sélecteur Vintage</title>
-<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Scratching  Viny</title>
+
+<link rel="icon" type="image/x-icon" href="img/favicon.ico">
+
 
 <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -297,9 +299,6 @@
             <button id="zoom-button" class="vintage-btn">Zoom</button>
         </div>
         
-        <!-- Le Panneau Gemini a été retiré -->
-        <!-- La Boîte d'analyse a été retirée -->
-
         <!-- Contrôle de la vitesse (Pitch) (Bas-Droit) -->
         <div id="pitch-control">
             <label for="pitch-slider">Pitch</label>
@@ -542,6 +541,7 @@
         const requestedChange = dragDelta - velocity;
 
         // APPLIQUER LA LIMITE D'ACCÉLÉRATION (Slew Rate Limiter)
+        // Correction de la syntaxe de Math.max et de la variable R_ACCELERATION (non définie)
         const limitedChange = Math.max(
             -MAX_SCRATCH_ACCELERATION, 
             Math.min(MAX_SCRATCH_ACCELERATION, requestedChange)
@@ -658,8 +658,6 @@
     
     // Initialisation
     setRPM("off");
-
-    // L'intégralité du code Gemini a été retirée.
 
 </script>
 </body>
