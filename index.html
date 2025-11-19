@@ -353,9 +353,9 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    const returnStrength = 0.05; // High-torque snap-back (from previous request)
-    const dragSensitivity = 3.0; // INCREASED for more responsive scratching
-    const MAX_PLAYBACK_RATE = 3.0; // NEW: Caps maximum playback speed to prevent it going 'too fast'
+    const returnStrength = 0.05; // High-torque snap-back 
+    const dragSensitivity = 3.0; // Increased for more responsive scratching
+    const MAX_PLAYBACK_RATE = 3.0; // Caps maximum playback speed
     let isZoomed = false;
 
     // Audio Cueing State
@@ -365,9 +365,11 @@
     
     // Base speed values (will be multiplied by pitch factor)
     let rpmMode = "off";
-    // 33 RPM is the baseline speed. 45 RPM speed (0.81) maintains the correct rotational ratio (45 / 33.333 = 1.35)
-    const RPM_BASE_SPEED = {"33": 0.6, "45": 0.81, "off": 0};
-    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 33 is the baseline for rate calculation
+    // UPDATED: Now using physically accurate degrees-per-frame calculation for 60FPS:
+    // 33 RPM: (33 rev/min / 60 sec) * 360 deg/rev / 60 FPS = 3.3 deg/frame
+    // 45 RPM: (45 rev/min / 60 sec) * 360 deg/rev / 60 FPS = 4.5 deg/frame
+    const RPM_BASE_SPEED = {"33": 3.3, "45": 4.5, "off": 0};
+    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 3.3 deg/frame is the baseline for audio rate calculation
 
     // Audio Setup
     let audioCtx = null;
@@ -546,7 +548,7 @@
             // 1. Calculate the rate based on the instantaneous velocity relative to base speed
             let targetRate = (velocity / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
             
-            // 2. Clamp and set the rate: NEW! Prevents music from going 'too fast'
+            // 2. Clamp and set the rate: Prevents music from going 'too fast'
             // Clamped between a very low floor (0.01) and the defined maximum rate.
             const finalRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, targetRate)); 
             
