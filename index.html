@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Turntable — Vintage Selector</title>
+<title>Vinyl Scratching ! </title>
 <link rel="icon" href="data:,">
 
 <style>
@@ -31,7 +31,7 @@
         height:80vmin;
         max-width:700px;
         max-height:700px;
-        /* Updated: Solid dark wood color */
+        /* Couleur bois sombre */
         background: #634b32; 
         border-radius:12px;
         box-shadow:
@@ -40,7 +40,24 @@
         overflow:hidden;
     }
 
-    /* Metal Plate for buttons (Top-Left) */
+    /* Message d'erreur Audio */
+    #audio-error {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 15px;
+        background: #cc0000;
+        color: white;
+        border-radius: 8px;
+        font-weight: bold;
+        text-align: center;
+        z-index: 100;
+        box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        display: none; /* Caché par défaut */
+    }
+
+    /* Plaque métallique pour les boutons (Haut-Gauche) */
     .control-panel {
         position: absolute;
         top: 20px;
@@ -54,7 +71,7 @@
         border-radius: 8px;
     }
 
-    /* Styled Vintage Buttons */
+    /* Boutons de style vintage */
     .vintage-btn {
         padding: 8px 16px;
         border: 1px solid #444;
@@ -81,13 +98,13 @@
         background: linear-gradient(to bottom, #b0b0b0 0%, #999 100%);
     }
     
-    /* Specific button active states for logic indication */
+    /* État actif spécifique du bouton zoom */
     .vintage-btn.zoom-active {
         background: linear-gradient(to bottom, #aaddff 0%, #6699cc 100%);
         box-shadow: inset 0 0 10px #3498db;
     }
 
-    /* --- Pitch Slider Styling (Bottom-Right) --- */
+    /* --- Contrôle de la vitesse (Pitch) (Bas-Droit) --- */
     #pitch-control {
         position: absolute; 
         bottom: 20px;       
@@ -101,7 +118,7 @@
         background: rgba(0, 0, 0, 0.4); 
         border: 1px solid rgba(255, 255, 255, 0.2);
         z-index: 50;
-        width: 120px; /* Increased width to accommodate the scale */
+        width: 120px; 
     }
 
     #pitch-control label {
@@ -113,7 +130,7 @@
     
     #pitch-slider {
         -webkit-appearance: none;
-        width: 100px; /* Adjusted width */
+        width: 100px; 
         height: 8px;
         background: #333;
         outline: none;
@@ -135,10 +152,10 @@
         box-shadow: 0 0 5px rgba(0,0,0,0.5), inset 0 1px 0 #fff;
     }
 
-    /* --- Pitch Scale Marks --- */
+    /* --- Échelle de Pitch --- */
     #pitch-scale {
         position: relative;
-        width: 100px; /* Matches slider width */
+        width: 100px; 
         height: 10px;
         margin-top: 2px;
         margin-bottom: 5px;
@@ -163,14 +180,14 @@
         white-space: nowrap;
     }
 
-    /* Long mark for the zero point */
+    /* Marque longue pour le point zéro */
     .pitch-mark.zero {
         height: 8px;
-        background: #00ff00; /* Green highlight for zero pitch */
+        background: #00ff00; 
     }
 
 
-    /* --- Vinyl Restoration using original local path (img/DISC.png) --- */
+    /* --- Disque vinyle --- */
     #vinyl {
         position:absolute;
         top:50%; left:50%;
@@ -188,16 +205,16 @@
     }
     #vinyl:active { cursor:grabbing; }
 
-    /* RPM Section Wrapper (Bottom-Left) */
+    /* Conteneur RPM (Bas-Gauche) */
     #rpm-wrapper {
         position:absolute;
         bottom: 5%;
         left: 5%;
         width: auto;
         display: flex;
-        flex-direction: column; /* Vertical Stack */
-        align-items: center;     /* Center everything horizontally */
-        gap: 8px;                /* Space between Labels, Dots, Image */
+        flex-direction: column; 
+        align-items: center;     
+        gap: 8px;                
         z-index:45;
         background: rgba(0,0,0,0.2); 
         padding: 10px;
@@ -205,7 +222,7 @@
         border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* 1. Labels on TOP (No Change) */
+    /* 1. Étiquettes du haut (45 - OFF - 33) */
     .rpm-labels {
         display:flex;
         justify-content:space-between;
@@ -223,7 +240,7 @@
         text-align: center;
     }
 
-    /* 2. Dots in MIDDLE (Swapped labels to reflect new accurate speed) */
+    /* 2. Contrôles de points au milieu */
     #rpm-controls {
         display:flex;
         justify-content:space-between;
@@ -245,14 +262,14 @@
 
     .rpm-choice:hover { background: #666; }
     
-    /* Light up the LED/Dot when active */
+    /* Lumière LED/Point actif */
     .rpm-choice.active { 
         background: #00ff00; 
         box-shadow: 0 0 10px #00ff00, inset 0 2px 3px rgba(0,0,0,0.5);
         border-color: #003300;
     }
 
-    /* 3. Image at BOTTOM */
+    /* 3. Image du bouton en bas */
     #rpm-img {
         width: 30px; 
         height: auto;
@@ -269,24 +286,26 @@
 <div id="turntable-container">
     <div id="turntable">
         
-        <!-- Control Panel (Top-Left) -->
+        <!-- Message d'erreur Audio -->
+        <div id="audio-error">ERREUR AUDIO : Fichier JB.mp3 introuvable.</div>
+
+        <!-- Panneau de contrôle (Haut-Gauche) -->
         <div class="control-panel">
-            <button id="stop-button" class="vintage-btn">Stop</button>
+            <button id="stop-button" class="vintage-btn">Arrêt</button>
             <button id="zoom-button" class="vintage-btn">Zoom</button>
         </div>
         
-        <!-- Pitch Control Slider (Bottom-Right) with Scale -->
+        <!-- Contrôle de la vitesse (Pitch) (Bas-Droit) -->
         <div id="pitch-control">
             <label for="pitch-slider">Pitch</label>
             <input type="range" min="-15" max="15" value="0" id="pitch-slider">
             <div id="pitch-scale">
-                <!-- Scale Marks for -15% to +15% range -->
                 
-                <!-- -15% -->
+                <!-- +15% -->
                 <span class="pitch-mark" style="left:0%;"></span>
                 <span class="pitch-label" style="left:0%;">+15%</span>
 
-                <!-- -10% -->
+                <!-- +10% -->
                 <span class="pitch-mark" style="left:16.67%;"></span>
                 <span class="pitch-label" style="left:16.67%;">+10</span>
 
@@ -294,43 +313,43 @@
                 <span class="pitch-mark zero" style="left:50%;"></span>
                 <span class="pitch-label" style="left:50%; top: 1px;">0</span>
 
-                <!-- +10% -->
+                <!-- -10% -->
                 <span class="pitch-mark" style="left:83.33%;"></span>
                 <span class="pitch-label" style="left:83.33%;">-10</span>
 
-                <!-- +15% -->
+                <!-- -15% -->
                 <span class="pitch-mark" style="left:100%;"></span>
                 <span class="pitch-label" style="left:100%;">-15%</span>
             </div>
         </div>
 
 
-        <!-- The vinyl disc uses the local img/DISC.png path -->
+        <!-- Le disque vinyle -->
         <div id="vinyl" style="transform: rotate(0deg);">
-            <!-- Content removed as the background image now represents the disc. -->
+            <!-- Le disque est rendu par l'image de fond -->
         </div>
 
-        <!-- RPM Control (Bottom-Left) -->
+        <!-- Contrôle RPM (Bas-Gauche) -->
         <div id="rpm-wrapper">
-            <!-- 1. Labels Top (45 - OFF - 33) -->
+            <!-- 1. Étiquettes du haut (45 - OFF - 33) -->
             <div class="rpm-labels">
                 <span>45</span>
-                <span>OFF</span>
+                <span>ARRÊT</span>
                 <span>33</span>
             </div>
 
-            <!-- 2. Controls Middle (Swapped 33 and 45 positions) -->
+            <!-- 2. Contrôles de points au milieu -->
             <div id="rpm-controls">
                 <div class="rpm-choice" data-rpm="45" title="45 RPM"></div>
-                <div class="rpm-choice active" data-rpm="off" title="Stop"></div>
-                <!-- Changed data-rpm to '33.33' for display accuracy, but the code still uses '33' as the key -->
+                <div class="rpm-choice active" data-rpm="off" title="Arrêt"></div>
+                <!-- Clé '33' utilisée pour la vitesse 33 1/3 RPM -->
                 <div class="rpm-choice" data-rpm="33" title="33 1/3 RPM"></div> 
             </div>
 
-            <!-- 3. Image Bottom (Knob now uses the local img/ChickenHead.png path and is 30px wide) -->
+            <!-- 3. Image du bouton en bas -->
             <img id="rpm-img" 
                  src="img/ChickenHead.png" 
-                 alt="RPM Knob"
+                 alt="Bouton RPM"
                  style="transform: rotate(0deg);">
         </div>
     </div>
@@ -344,35 +363,39 @@
     const zoomBtn = document.getElementById('zoom-button');
     const turntableContainer = document.getElementById('turntable-container');
     const pitchSlider = document.getElementById('pitch-slider');
+    const audioErrorDiv = document.getElementById('audio-error'); 
 
     let currentRotation = 0;
     let velocity = 0;
-    let targetBaseVelocity = 0; // Speed set by 33/45 button
-    let currentPitchFactor = 1.0; // Speed modulation from slider
+    let targetBaseVelocity = 0; 
+    let currentPitchFactor = 1.0; 
     let isDragging = false;
     let lastAngle = 0;
     let center = {x:0, y:0};
     
-    // Physics constants for scratching
-    const returnStrength = 0.05; // High-torque snap-back 
-    const dragSensitivity = 3.0; // Increased for more responsive scratching
-    const MAX_PLAYBACK_RATE = 3.0; // Caps maximum playback speed
+    // Constantes de physique (ajustées)
+    const returnStrength = 0.08; 
+    const dragSensitivity = 3.0; 
+    
+    // NOUVEAU: Limite la vitesse de lecture maximale à 250% (pour éviter l'inaudibilité)
+    const MAX_PLAYBACK_RATE = 2.5; 
+    
+    // NOUVEAU: Limite l'ACCÉLÉRATION/DÉCÉLÉRATION maximale par frame lors du scratch
+    const MAX_SCRATCH_ACCELERATION = 0.5; 
+
     let isZoomed = false;
 
-    // Audio Cueing State
+    // État Audio
     let audioCuePointSeconds = 0; 
-    let isPlaying = false; // Simple flag to track if audio is active
-    let audioDurationSeconds = 0; // Total duration of the audio buffer
+    let isPlaying = false; 
+    let audioDurationSeconds = 0; 
     
-    // Base speed values (will be multiplied by pitch factor)
     let rpmMode = "off";
-    // UPDATED: Now using physically accurate degrees-per-frame calculation for 60FPS:
-    // 33 1/3 RPM: (33.333... rev/min / 60 sec) * 360 deg/rev / 60 FPS = 3.333... deg/frame
-    // 45 RPM: (45 rev/min / 60 sec) * 360 deg/rev / 60 FPS = 4.5 deg/frame
+    // Calcul précis des degrés par frame (pour 60 FPS) :
     const RPM_BASE_SPEED = {"33": 360 / 60 / 60 * (100 / 3), "45": 4.5, "off": 0}; 
-    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 3.333... deg/frame is the baseline for audio rate calculation
+    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; 
 
-    // Audio Setup
+    // Configuration Audio
     let audioCtx = null;
     let buffer = null;
     let source = null;
@@ -383,15 +406,10 @@
     }
     
     /**
-     * Maps the visual rotation (in degrees) to an audio offset (in seconds).
-     * @param {number} degrees - The total accumulated rotation in degrees.
-     * @param {number} duration - The total duration of the audio buffer.
-     * @returns {number} The audio time offset in seconds.
+     * Convertit la rotation visuelle (en degrés) en un décalage audio (en secondes).
      */
     function rotationToAudioOffset(degrees, duration) {
-        // The rotation is modulo 360 to stay within one loop rotation
         let offset = (degrees * duration / 360) % duration;
-        // Handle negative offsets (reverse scratching)
         if (offset < 0) {
             offset += duration;
         }
@@ -400,8 +418,7 @@
 
 
     /*
-     * ASYNC function to load audio and start playback from a specific offset.
-     * Starts the playback source.
+     * Fonction ASYNC pour charger l'audio et démarrer la lecture.
      */
     async function startPlayback() {
         initAudio();
@@ -415,55 +432,53 @@
                 if(!res.ok) throw new Error("Audio file not found: " + audioURL);
                 const arr = await res.arrayBuffer(); 
                 buffer = await audioCtx.decodeAudioData(arr); 
-                audioDurationSeconds = buffer.duration; // Store buffer duration
+                audioDurationSeconds = buffer.duration; 
+                audioErrorDiv.style.display = 'none'; 
             } catch(e) {
-                console.warn("Audio load or decode failed. Ensure JB.mp3 is available:", e);
+                console.error("Échec du chargement ou du décodage audio:", e);
+                audioErrorDiv.style.display = 'block'; 
                 return; 
             }
         }
         
-        // Stop the existing source before creating a new one
         if(source) {
             try { source.stop(); } catch(e){}
         }
 
-        // Calculate the correct starting rate based on current RPM mode
         const rpmSpeed = RPM_BASE_SPEED[rpmMode];
-        // Rate is (RPM rotational velocity / 33.333... RPM baseline) * pitch factor
         let initialRate = (rpmSpeed / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
         if (rpmMode === 'off' || NORMAL_RPM_VELOCITY === 0) initialRate = 1.0 * currentPitchFactor;
+        // La vitesse initiale est également limitée par MAX_PLAYBACK_RATE
+        initialRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, initialRate)); 
 
         source = audioCtx.createBufferSource(); 
         source.buffer = buffer; 
         source.loop = true; 
         
-        // Initial playback rate is now correctly calculated and applied immediately
         source.playbackRate.value = initialRate; 
         source.connect(audioCtx.destination); 
         
-        // Start playback from the current cue point (audioCuePointSeconds)
         source.start(0, audioCuePointSeconds); 
         isPlaying = true;
     }
 
     /**
-     * Stops the audio and saves the current cue point based on visual rotation.
+     * Arrête l'audio et sauvegarde le point de cue actuel.
      */
     function stopAudio() {
         if(source && audioCtx && buffer) {
             try { 
-                // Calculate the new cue point based on the last visual rotation
                 audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
                 source.stop(); 
             } catch(e){
-                console.error("Error stopping source:", e);
+                console.error("Erreur lors de l'arrêt de la source audio:", e);
             }
         }
         source = null;
         isPlaying = false;
     }
 
-    // --- Physics Engine ---
+    // --- Moteur Physique ---
     function updateCenter(){ 
         const r = vinyl.getBoundingClientRect(); 
         center.x = r.left + r.width/2; 
@@ -477,7 +492,6 @@
     }
 
     vinyl.addEventListener("pointerdown", async e => { 
-        // Only start audio if not playing and RPM is set to ON (to load the buffer)
         if(!isPlaying && rpmMode !== 'off') {
              await startPlayback(); 
         }
@@ -490,7 +504,7 @@
 
     vinyl.addEventListener("pointermove", e => { 
         if(!isDragging) return; 
-        if(!isPlaying) return; // Only process move if audio is playing
+        if(!isPlaying) return; 
 
         const ang = getAngle(e); 
         let delta = ang - lastAngle; 
@@ -498,62 +512,61 @@
         if(delta < -180) delta += 360; 
         lastAngle = ang; 
         
-        // Apply increased drag sensitivity for better scratching feel
         const dragDelta = delta * dragSensitivity; 
         
-        currentRotation += dragDelta; 
-        velocity = dragDelta; 
-        // Target velocity is immediately set to current drag velocity
-        targetBaseVelocity = dragDelta; 
-        
-        // Note: Playback rate update happens in the engine loop now
+        // Calculer la différence de vitesse demandée
+        const requestedChange = dragDelta - velocity;
+
+        // APPLIQUER LA LIMITE D'ACCÉLÉRATION (Slew Rate Limiter)
+        // Limite le changement de vitesse par frame à MAX_SCRATCH_ACCELERATION
+        const limitedChange = Math.max(
+            -MAX_SCRATCH_ACCELERATION, 
+            Math.min(MAX_SCRATCH_ACCELERATION, requestedChange)
+        );
+
+        velocity += limitedChange; 
+        currentRotation += velocity; 
+        // La cible est la vitesse manuelle (la platine ne tente pas de revenir au RPM)
+        targetBaseVelocity = velocity; 
     });
 
     vinyl.addEventListener("pointerup", () => { 
         isDragging = false; 
-        // Revert target velocity to the calculated RPM speed, modulated by pitch
+        // Revenir à la vitesse RPM cible, modulée par le pitch
         updateTargetVelocity(); 
         vinyl.style.cursor = "grab";
         
-        // If the mode is off, save the cue point and stop the audio after letting go
         if(rpmMode === 'off') {
             stopAudio(); 
-            // Reset visual rotation to 0 when stopped for a clean look
             currentRotation = 0;
             vinyl.style.transform = `translate(-50%, -50%) rotate(0deg)`;
         }
     });
     
-    // --- Target Velocity Calculation ---
+    // --- Calcul de la vitesse cible ---
     function updateTargetVelocity() {
-        // Only update if not currently scratching
         if (!isDragging) {
-             // Target velocity is the RPM base speed multiplied by the pitch factor
             targetBaseVelocity = RPM_BASE_SPEED[rpmMode] * currentPitchFactor;
         }
     }
 
     function engine(){ 
         if(!isDragging){ 
-            // Gradually transition current velocity towards target velocity (spin up/down effect)
-            // Simulates a high-torque motor snapping back quickly to the target speed.
+            // La force de rappel (returnStrength) plus élevée rend cette transition plus rapide et est déjà progressive
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
         currentRotation += velocity; 
-        // Apply rotation to the vinyl image element
         vinyl.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`; 
         
-        // Pitch shift effect: link rotation speed (velocity) to music speed
+        // Mise à jour de la vitesse de lecture audio (Pitch Shift)
         if(source && audioCtx && isPlaying){ 
-            // 1. Calculate the rate based on the instantaneous velocity relative to base speed
+            
             let targetRate = (velocity / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
             
-            // 2. Clamp and set the rate: Prevents music from going 'too fast'
-            // Clamped between a very low floor (0.01) and the defined maximum rate.
+            // LIMITER LA VITESSE MAXIMALE DU SON
             const finalRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, targetRate)); 
             
-            // Crucial: Update the existing source's playback rate continuously
             source.playbackRate.value = finalRate; 
         } 
         
@@ -561,35 +574,30 @@
     }
     engine();
 
-    // --- RPM Control Logic ---
+    // --- Logique de Contrôle RPM ---
     function setRPM(mode){
         rpmMode = mode;
-        updateTargetVelocity(); // Calculate the new final target velocity
+        updateTargetVelocity(); 
 
         if (mode !== 'off') {
             const isStartingNew = !isPlaying;
 
-            // Set velocity to 120% of the new target speed for a noticeable acceleration/deceleration start
-            // This value is used by the engine to smoothly ramp up to targetBaseVelocity
             velocity = targetBaseVelocity * 1.2; 
             
             if (isStartingNew) {
-                // If it was off, start the audio playback fresh
                 startPlayback(); 
             } 
-            // If already playing, the engine loop above handles the smooth transition of speed/pitch.
 
         } else {
-            // Stop mode
             velocity = 0; 
-            stopAudio(); // Saves cue point and stops audio
+            stopAudio(); 
         }
 
-        // Update UI
+        // Mettre à jour l'interface utilisateur
         rpmChoices.forEach(c => c.classList.remove('active'));
         document.querySelector(`.rpm-choice[data-rpm='${mode}']`).classList.add('active');
         
-        // Rotate Knob Image (45 - OFF - 33 layout)
+        // Rotation du bouton (45 - OFF - 33)
         if(mode === "45") rpmImg.style.transform = "rotate(-30deg)"; 
         else if(mode === "33") rpmImg.style.transform = "rotate(30deg)"; 
         else rpmImg.style.transform = "rotate(0deg)";
@@ -597,22 +605,21 @@
 
     rpmChoices.forEach(c => c.addEventListener('click', () => { setRPM(c.dataset.rpm); }));
 
-    // --- Pitch Slider Logic ---
+    // --- Logique du Slider Pitch ---
     pitchSlider.addEventListener('input', () => {
         const percentageChange = parseFloat(pitchSlider.value) / 100; 
         currentPitchFactor = 1.0 + percentageChange;
         
-        // Update physics calculations to account for the new pitch
         updateTargetVelocity(); 
     });
 
 
-    // --- Stop Button Logic ---
+    // --- Logique du Bouton Arrêt ---
     stopBtn.addEventListener('click', () => {
         setRPM("off"); 
     });
 
-    // --- Zoom Button Logic ---
+    // --- Logique du Bouton Zoom ---
     zoomBtn.addEventListener('click', () => {
         isZoomed = !isZoomed;
         if(isZoomed) {
@@ -625,7 +632,7 @@
         setTimeout(updateCenter, 550);
     });
     
-    // Initial setup
+    // Initialisation
     setRPM("off");
 
 </script>
