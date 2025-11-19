@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Vinyl Scratching ! </title>
+<title>Platine vinyle — Sélecteur Vintage</title>
 <link rel="icon" href="data:,">
 
 <style>
@@ -373,14 +373,10 @@
     let lastAngle = 0;
     let center = {x:0, y:0};
     
-    // Constantes de physique (ajustées)
+    // Constantes de physique
     const returnStrength = 0.08; 
     const dragSensitivity = 3.0; 
-    
-    // NOUVEAU: Limite la vitesse de lecture maximale à 250% (pour éviter l'inaudibilité)
     const MAX_PLAYBACK_RATE = 2.5; 
-    
-    // NOUVEAU: Limite l'ACCÉLÉRATION/DÉCÉLÉRATION maximale par frame lors du scratch
     const MAX_SCRATCH_ACCELERATION = 0.5; 
 
     let isZoomed = false;
@@ -448,7 +444,6 @@
         const rpmSpeed = RPM_BASE_SPEED[rpmMode];
         let initialRate = (rpmSpeed / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
         if (rpmMode === 'off' || NORMAL_RPM_VELOCITY === 0) initialRate = 1.0 * currentPitchFactor;
-        // La vitesse initiale est également limitée par MAX_PLAYBACK_RATE
         initialRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, initialRate)); 
 
         source = audioCtx.createBufferSource(); 
@@ -487,22 +482,38 @@
     updateCenter(); 
     window.addEventListener("resize", updateCenter);
 
+    /**
+     * Calcule l'angle du pointeur par rapport au centre de la platine.
+     * L'angle est entre -180 et 180 degrés. 0° = droite, 90° = haut.
+     */
     function getAngle(e){ 
         return Math.atan2(e.clientY - center.y, e.clientX - center.x) * 180 / Math.PI; 
     }
 
     vinyl.addEventListener("pointerdown", async e => { 
-        if(!isPlaying && rpmMode !== 'off') {
-             await startPlayback(); 
-        }
+        const angle = getAngle(e);
         
-        isDragging=true; 
-        lastAngle=getAngle(e); 
-        vinyl.setPointerCapture(e.pointerId); 
-        vinyl.style.cursor = "grabbing";
+        // VÉRIFIER SI L'UTILISATEUR CLIQUE DANS LA ZONE DE SCRATCH (Quadrant Supérieur Droit : 0° à 90°)
+        if (angle >= 0 && angle <= 90) {
+            // Mode Scratch activé
+            if(!isPlaying && rpmMode !== 'off') {
+                 await startPlayback(); 
+            }
+            
+            isDragging = true; 
+            lastAngle = angle; 
+            vinyl.setPointerCapture(e.pointerId); 
+            vinyl.style.cursor = "grabbing";
+        } else {
+            // Clic en dehors de la zone de scratch. Le mouvement de la souris n'aura pas d'effet.
+            isDragging = false; 
+            vinyl.setPointerCapture(e.pointerId); 
+            vinyl.style.cursor = "grab";
+        }
     });
 
     vinyl.addEventListener("pointermove", e => { 
+        // Le mouvement n'est traité que si isDragging est VRAI (défini dans pointerdown)
         if(!isDragging) return; 
         if(!isPlaying) return; 
 
@@ -518,7 +529,6 @@
         const requestedChange = dragDelta - velocity;
 
         // APPLIQUER LA LIMITE D'ACCÉLÉRATION (Slew Rate Limiter)
-        // Limite le changement de vitesse par frame à MAX_SCRATCH_ACCELERATION
         const limitedChange = Math.max(
             -MAX_SCRATCH_ACCELERATION, 
             Math.min(MAX_SCRATCH_ACCELERATION, requestedChange)
@@ -526,7 +536,6 @@
 
         velocity += limitedChange; 
         currentRotation += velocity; 
-        // La cible est la vitesse manuelle (la platine ne tente pas de revenir au RPM)
         targetBaseVelocity = velocity; 
     });
 
@@ -552,7 +561,7 @@
 
     function engine(){ 
         if(!isDragging){ 
-            // La force de rappel (returnStrength) plus élevée rend cette transition plus rapide et est déjà progressive
+            // Transition progressive (accélération/décélération) vers la vitesse cible
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
@@ -582,6 +591,7 @@
         if (mode !== 'off') {
             const isStartingNew = !isPlaying;
 
+            // Démarrage de la vitesse légèrement plus haute que la cible (spin up)
             velocity = targetBaseVelocity * 1.2; 
             
             if (isStartingNew) {
@@ -589,6 +599,7 @@
             } 
 
         } else {
+            // Mode Arrêt
             velocity = 0; 
             stopAudio(); 
         }
