@@ -312,18 +312,18 @@
 
         <!-- RPM Control (Bottom-Left) -->
         <div id="rpm-wrapper">
-            <!-- 1. Labels Top (Inverted: 33 - OFF - 45) -->
+            <!-- 1. Labels Top (45 - OFF - 33) -->
             <div class="rpm-labels">
-                <span>33</span>
-                <span>OFF</span>
                 <span>45</span>
+                <span>OFF</span>
+                <span>33</span>
             </div>
 
-            <!-- 2. Controls Middle -->
+            <!-- 2. Controls Middle (Swapped 33 and 45 positions) -->
             <div id="rpm-controls">
-                <div class="rpm-choice" data-rpm="33" title="33 RPM"></div>
-                <div class="rpm-choice active" data-rpm="off" title="Stop"></div>
                 <div class="rpm-choice" data-rpm="45" title="45 RPM"></div>
+                <div class="rpm-choice active" data-rpm="off" title="Stop"></div>
+                <div class="rpm-choice" data-rpm="33" title="33 RPM"></div>
             </div>
 
             <!-- 3. Image Bottom (Knob now uses the local img/ChickenHead.png path and is 30px wide) -->
@@ -353,7 +353,7 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    // UPDATED: Drastically reduced returnStrength for near-instant snap-back (high-torque motor feel).
+    // Drastically reduced returnStrength for near-instant snap-back (high-torque motor feel).
     const returnStrength = 0.0005; 
     const dragSensitivity = 1.5; // Multiplier for drag input
     const pitchMappingFactor = 0.15; // How rotation velocity affects audio pitch
@@ -366,8 +366,7 @@
     
     // Base speed values (will be multiplied by pitch factor)
     let rpmMode = "off";
-    // UPDATED: 33 RPM means 33 1/3 revolutions per minute. 
-    // Adjusted 45 RPM speed (0.81) to maintain the correct rotational ratio (45 / 33.333 = 1.35)
+    // 33 RPM is the baseline speed. 45 RPM speed (0.81) maintains the correct rotational ratio (45 / 33.333 = 1.35)
     const RPM_BASE_SPEED = {"33": 0.6, "45": 0.81, "off": 0};
     const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // 33 is the baseline for rate calculation
 
@@ -383,7 +382,6 @@
     
     /**
      * Maps the visual rotation (in degrees) to an audio offset (in seconds).
-     * We use a constant mapping: 360 degrees = full duration.
      * @param {number} degrees - The total accumulated rotation in degrees.
      * @param {number} duration - The total duration of the audio buffer.
      * @returns {number} The audio time offset in seconds.
@@ -401,8 +399,7 @@
 
     /*
      * ASYNC function to load audio and start playback from a specific offset.
-     * This function now acts as the central mechanism for starting/restarting audio
-     * at a precise cue point.
+     * IMPORTANT: This now calculates the initial rate based on rpmMode and pitch.
      */
     async function startPlayback() {
         initAudio();
@@ -428,12 +425,18 @@
             try { source.stop(); } catch(e){}
         }
 
+        // Calculate the correct starting rate based on current RPM mode
+        const rpmSpeed = RPM_BASE_SPEED[rpmMode];
+        // Rate is (RPM rotational velocity / 33 RPM baseline) * pitch factor
+        let initialRate = (rpmSpeed / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
+        if (rpmMode === 'off' || NORMAL_RPM_VELOCITY === 0) initialRate = 1.0 * currentPitchFactor;
+
         source = audioCtx.createBufferSource(); 
         source.buffer = buffer; 
         source.loop = true; 
         
-        // Initial playback rate is 1.0 (normal speed), modulated by the pitch slider
-        source.playbackRate.value = 1.0 * currentPitchFactor; 
+        // Initial playback rate is now correctly calculated and applied immediately
+        source.playbackRate.value = initialRate; 
         source.connect(audioCtx.destination); 
         
         // Start playback from the current cue point (audioCuePointSeconds)
@@ -499,7 +502,7 @@
         // Target velocity is overridden by drag velocity during scratching
         targetBaseVelocity = dragDelta; 
         
-        // --- LOGIC FOR TIGHT AUDIO/VISUAL SYNCHRONIZATION ---
+        // --- LOGIC FOR TIGHT AUDIO/VISUAL SYNCHRONIZATION (SCRATCHING) ---
         if(isPlaying && buffer) {
             // 1. Calculate the new cue point based on the current visual rotation
             audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
@@ -512,7 +515,7 @@
             }
             
             // 3. Immediately restart the audio from the new cue point. 
-            // This forces the audio phase to match the visual disc rotation.
+            // The initial rate will be calculated inside startPlayback based on the current rpmMode
             startPlayback(); 
         }
     });
@@ -571,8 +574,8 @@
         updateTargetVelocity(); // Recalculate based on new RPM mode
 
         if (mode !== 'off') {
-            // Jump to 90% of target speed for much faster spin-up
-            velocity = targetBaseVelocity * 0.9; 
+            // UPDATED: Jump to 120% of target speed for a very fast, noticeable spin-up (overshoot)
+            velocity = targetBaseVelocity * 1.2; 
             startPlayback(); // Will restart from saved cue point
         } else {
             velocity = 0; 
@@ -583,9 +586,9 @@
         rpmChoices.forEach(c => c.classList.remove('active'));
         document.querySelector(`.rpm-choice[data-rpm='${mode}']`).classList.add('active');
         
-        // Rotate Knob Image 
-        if(mode === "33") rpmImg.style.transform = "rotate(-30deg)";
-        else if(mode === "45") rpmImg.style.transform = "rotate(30deg)";
+        // Rotate Knob Image (45 - OFF - 33 layout)
+        if(mode === "45") rpmImg.style.transform = "rotate(-30deg)"; 
+        else if(mode === "33") rpmImg.style.transform = "rotate(30deg)"; 
         else rpmImg.style.transform = "rotate(0deg)";
     }
 
@@ -603,7 +606,6 @@
 
     // --- Stop Button Logic ---
     stopBtn.addEventListener('click', () => {
-        // setRPM("off") now correctly handles saving the cue point and stopping all motion.
         setRPM("off"); 
     });
 
