@@ -515,7 +515,7 @@
             }
             
             // 3. Immediately restart the audio from the new cue point. 
-            // The initial rate will be calculated inside startPlayback based on the current rpmMode
+            // This is necessary for tight scratching simulation.
             startPlayback(); 
         }
     });
@@ -561,7 +561,8 @@
             
             // 2. Clamp and set the rate
             const finalRate = Math.max(0.01, targetRate);
-            source.playbackRate.value = finalRate;
+            // Crucial: Update the existing source's playback rate continuously
+            source.playbackRate.value = finalRate; 
         } 
         
         requestAnimationFrame(engine); 
@@ -571,13 +572,23 @@
     // --- RPM Control Logic ---
     function setRPM(mode){
         rpmMode = mode;
-        updateTargetVelocity(); // Recalculate based on new RPM mode
+        updateTargetVelocity(); // Calculate the new final target velocity
 
         if (mode !== 'off') {
-            // UPDATED: Jump to 120% of target speed for a very fast, noticeable spin-up (overshoot)
+            const isStartingNew = !isPlaying;
+
+            // Set velocity to 120% of the new target speed for a noticeable acceleration/deceleration start
             velocity = targetBaseVelocity * 1.2; 
-            startPlayback(); // Will restart from saved cue point
+            
+            if (isStartingNew) {
+                // If it was off, start the audio playback fresh
+                startPlayback(); 
+            } 
+            // If already playing, we DO NOT call startPlayback() again. 
+            // The engine loop above handles the smooth transition of speed/pitch.
+
         } else {
+            // Stop mode
             velocity = 0; 
             stopAudio(); // Saves cue point and stops audio
         }
