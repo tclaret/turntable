@@ -356,11 +356,13 @@
     // Drastically reduced returnStrength for near-instant snap-back (high-torque motor feel).
     const returnStrength = 0.0005; 
     const dragSensitivity = 1.5; // Multiplier for drag input
-    const pitchMappingFactor = 0.15; // How rotation velocity affects audio pitch
     let isZoomed = false;
 
     // Audio Cueing State
-    let audioCuePointSeconds = 0; // The audio position (offset) to start/restart from
+    // The previous implementation used this to save the cue point when stopping.
+    // However, for pure playbackRate manipulation (like a real turntable), we don't need this.
+    // We keep it for the initial start and for stopping the record.
+    let audioCuePointSeconds = 0; 
     let isPlaying = false; // Simple flag to track if audio is active
     let audioDurationSeconds = 0; // Total duration of the audio buffer
     
@@ -399,7 +401,7 @@
 
     /*
      * ASYNC function to load audio and start playback from a specific offset.
-     * IMPORTANT: This now calculates the initial rate based on rpmMode and pitch.
+     * Starts the playback source.
      */
     async function startPlayback() {
         initAudio();
@@ -488,7 +490,8 @@
 
     vinyl.addEventListener("pointermove", e => { 
         if(!isDragging) return; 
-        
+        if(!isPlaying) return; // Only process move if audio is playing
+
         const ang = getAngle(e); 
         let delta = ang - lastAngle; 
         if(delta > 180) delta -= 360; 
@@ -499,25 +502,14 @@
         
         currentRotation += dragDelta; 
         velocity = dragDelta; 
-        // Target velocity is overridden by drag velocity during scratching
+        // Target velocity is immediately set to current drag velocity
         targetBaseVelocity = dragDelta; 
         
-        // --- LOGIC FOR TIGHT AUDIO/VISUAL SYNCHRONIZATION (SCRATCHING) ---
-        if(isPlaying && buffer) {
-            // 1. Calculate the new cue point based on the current visual rotation
-            audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
-            
-            // 2. Stop the current source
-            if(source) {
-                try { source.stop(); } catch(e){}
-                source = null;
-                isPlaying = false;
-            }
-            
-            // 3. Immediately restart the audio from the new cue point. 
-            // This is necessary for tight scratching simulation.
-            startPlayback(); 
-        }
+        // --- IMPROVED LOGIC: DO NOT RESTART AUDIO SOURCE ---
+        // Instead of stopping and restarting the source, we let the engine loop
+        // pick up the instantaneous 'velocity' and update the playback rate continuously.
+        // We only need to update the visual rotation here.
+        
     });
 
     vinyl.addEventListener("pointerup", () => { 
@@ -547,6 +539,7 @@
     function engine(){ 
         if(!isDragging){ 
             // Gradually transition current velocity towards target velocity (spin up/down effect)
+            // This also handles the deceleration/acceleration after scratching stops.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
@@ -578,14 +571,14 @@
             const isStartingNew = !isPlaying;
 
             // Set velocity to 120% of the new target speed for a noticeable acceleration/deceleration start
+            // This value is used by the engine to smoothly ramp up to targetBaseVelocity
             velocity = targetBaseVelocity * 1.2; 
             
             if (isStartingNew) {
                 // If it was off, start the audio playback fresh
                 startPlayback(); 
             } 
-            // If already playing, we DO NOT call startPlayback() again. 
-            // The engine loop above handles the smooth transition of speed/pitch.
+            // If already playing, the engine loop above handles the smooth transition of speed/pitch.
 
         } else {
             // Stop mode
