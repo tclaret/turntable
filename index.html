@@ -353,15 +353,12 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    // Drastically reduced returnStrength for near-instant snap-back (high-torque motor feel).
-    const returnStrength = 0.0005; 
-    const dragSensitivity = 1.5; // Multiplier for drag input
+    // INCREASED returnStrength significantly to simulate a high-torque motor snapping back quickly.
+    const returnStrength = 0.05; 
+    const dragSensitivity = 2.0; // Slightly increased drag sensitivity for better feel
     let isZoomed = false;
 
     // Audio Cueing State
-    // The previous implementation used this to save the cue point when stopping.
-    // However, for pure playbackRate manipulation (like a real turntable), we don't need this.
-    // We keep it for the initial start and for stopping the record.
     let audioCuePointSeconds = 0; 
     let isPlaying = false; // Simple flag to track if audio is active
     let audioDurationSeconds = 0; // Total duration of the audio buffer
@@ -539,7 +536,7 @@
     function engine(){ 
         if(!isDragging){ 
             // Gradually transition current velocity towards target velocity (spin up/down effect)
-            // This also handles the deceleration/acceleration after scratching stops.
+            // This now simulates a high-torque motor, snapping back quickly to the target speed.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
