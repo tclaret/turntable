@@ -353,9 +353,9 @@
     let center = {x:0, y:0};
     
     // Physics constants for scratching
-    // INCREASED returnStrength significantly to simulate a high-torque motor snapping back quickly.
-    const returnStrength = 0.05; 
-    const dragSensitivity = 2.0; // Slightly increased drag sensitivity for better feel
+    const returnStrength = 0.05; // High-torque snap-back (from previous request)
+    const dragSensitivity = 3.0; // INCREASED for more responsive scratching
+    const MAX_PLAYBACK_RATE = 3.0; // NEW: Caps maximum playback speed to prevent it going 'too fast'
     let isZoomed = false;
 
     // Audio Cueing State
@@ -495,6 +495,7 @@
         if(delta < -180) delta += 360; 
         lastAngle = ang; 
         
+        // Apply increased drag sensitivity for better scratching feel
         const dragDelta = delta * dragSensitivity; 
         
         currentRotation += dragDelta; 
@@ -502,11 +503,7 @@
         // Target velocity is immediately set to current drag velocity
         targetBaseVelocity = dragDelta; 
         
-        // --- IMPROVED LOGIC: DO NOT RESTART AUDIO SOURCE ---
-        // Instead of stopping and restarting the source, we let the engine loop
-        // pick up the instantaneous 'velocity' and update the playback rate continuously.
-        // We only need to update the visual rotation here.
-        
+        // Note: Playback rate update happens in the engine loop now
     });
 
     vinyl.addEventListener("pointerup", () => { 
@@ -536,7 +533,7 @@
     function engine(){ 
         if(!isDragging){ 
             // Gradually transition current velocity towards target velocity (spin up/down effect)
-            // This now simulates a high-torque motor, snapping back quickly to the target speed.
+            // Simulates a high-torque motor snapping back quickly to the target speed.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
@@ -549,8 +546,10 @@
             // 1. Calculate the rate based on the instantaneous velocity relative to base speed
             let targetRate = (velocity / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
             
-            // 2. Clamp and set the rate
-            const finalRate = Math.max(0.01, targetRate);
+            // 2. Clamp and set the rate: NEW! Prevents music from going 'too fast'
+            // Clamped between a very low floor (0.01) and the defined maximum rate.
+            const finalRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, targetRate)); 
+            
             // Crucial: Update the existing source's playback rate continuously
             source.playbackRate.value = finalRate; 
         } 
