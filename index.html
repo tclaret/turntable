@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Platine vinyle — Sélecteur Vintage</title>
 
-<!-- NOUVEAU FAVICON : Lien vers le fichier ICO généré dans le répertoire img/ -->
+<!-- FAVICON -->
 <link rel="icon" type="image/x-icon" href="img/favicon.ico">
 
 
@@ -195,12 +195,14 @@
     }
 
 
-    /* --- Disque vinyle --- */
+    /* --- Disque vinyle (Réglages par défaut : Centré) --- */
     #vinyl {
         position:absolute;
-        top:50%; left:50%;
+        top:50%; 
+        left:50%; /* Centré par défaut */
         transform: translate(-50%, -50%);
-        width:85%; height:85%;
+        width:85%; 
+        height:85%;
         border-radius:50%;
         
         background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
@@ -210,8 +212,19 @@
         cursor:grab;
         will-change:transform;
         box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        transition: width 0.3s, height 0.3s, left 0.3s; /* Transition pour le zoom */
     }
     #vinyl:active { cursor:grabbing; }
+
+    /* CLASSE POUR LE DÉCALAGE (Zoom 2 / mode Scratch) */
+    .vinyl-scratch-mode {
+        /* Rend le vinyle 1.25x plus grand que le plateau (pour le débordement) */
+        width: 125% !important; 
+        height: 125% !important; 
+        /* Décale le centre vers la droite pour que le bord GAUCHE s'aligne avec le plateau (62.5% du plateau) */
+        left: 62.5% !important; 
+    }
+
 
     /* Conteneur RPM (Bas-Gauche) */
     #rpm-wrapper {
@@ -309,14 +322,20 @@
                 0 10px 30px rgba(0,0,0,0.8);
         }
 
-        /* 1. EFFET DE DÉBORDEMENT POUR LE SCRATCH AU POUCE (mise à jour) */
+        /* En mode mobile, le mode scratch est le mode par défaut pour la visibilité du vinyle */
         #vinyl {
-            /* Rend le vinyle 1.25x plus grand que le plateau */
             width: 125%; 
             height: 125%; 
-            /* Décale le centre vers la droite pour que le bord GAUCHE s'aligne avec le plateau (62.5%) */
             left: 62.5%; 
         }
+        
+        /* Retirer la classe scratch si elle est ajoutée, elle est redondante en mode mobile */
+        #vinyl.vinyl-scratch-mode {
+             width: 125%; 
+             height: 125%; 
+             left: 62.5%; 
+        }
+
 
         /* 2. Repositionnement des contrôles pour l'ergonomie mobile */
         
@@ -370,7 +389,7 @@
         <!-- Panneau de contrôle (Haut-Gauche) -->
         <div class="control-panel">
             <button id="stop-button" class="vintage-btn">Arrêt</button>
-            <button id="zoom-button" class="vintage-btn">Zoom</button>
+            <button id="zoom-button" class="vintage-btn">Vue Scratch</button>
         </div>
         
         <!-- Contrôle de la vitesse (Pitch) (Bas-Droit) -->
@@ -461,7 +480,13 @@
     const MAX_PLAYBACK_RATE = 2.5; 
     const MAX_SCRATCH_ACCELERATION = 0.5; 
 
-    let isZoomed = false;
+    // Nouveau : État pour le mode Scratch/Décalé
+    let isScratchMode = false;
+    // Si l'écran est petit, le mode scratch est activé par défaut.
+    if (window.innerWidth <= 768) {
+        isScratchMode = true;
+    }
+
 
     // État Audio
     let audioCuePointSeconds = 0; 
@@ -636,6 +661,7 @@
         if(rpmMode === 'off') {
             stopAudio(); 
             currentRotation = 0;
+            // On s'assure que la translation CSS est correcte après l'arrêt
             vinyl.style.transform = `translate(-50%, -50%) rotate(0deg)`;
         }
     });
@@ -654,7 +680,11 @@
         } 
         
         currentRotation += velocity; 
-        vinyl.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`; 
+        
+        // Applique la rotation ET la translation nécessaire pour le mode Scratch
+        const rotationTransform = `rotate(${currentRotation}deg)`;
+        const baseTranslate = 'translate(-50%, -50%)';
+        vinyl.style.transform = `${baseTranslate} ${rotationTransform}`;
         
         // Mise à jour de la vitesse de lecture audio (Pitch Shift)
         if(source && audioCtx && isPlaying){ 
@@ -717,27 +747,52 @@
     stopBtn.addEventListener('click', () => {
         setRPM("off"); 
     });
+    
+    // --- Logique du Bouton Vue Scratch (Deux niveaux de zoom pour grand écran) ---
+    function updateScratchModeUI() {
+        if(isScratchMode) {
+            vinyl.classList.add('vinyl-scratch-mode');
+            zoomBtn.classList.add("zoom-active");
+            zoomBtn.textContent = "Vue Centrée";
+            // Zoom visuel de la platine pour la mise au point (1.5 pour grand écran)
+            if (window.innerWidth > 768) {
+                turntableContainer.style.transform = "scale(1.5)";
+            }
+        } else {
+            vinyl.classList.remove('vinyl-scratch-mode');
+            zoomBtn.classList.remove("zoom-active");
+            zoomBtn.textContent = "Vue Scratch";
+            // Retour au zoom standard
+            turntableContainer.style.transform = "scale(1)";
+        }
+        setTimeout(updateCenter, 550); // Mettre à jour le centre après la transition
+    }
 
-    // --- Logique du Bouton Zoom ---
     zoomBtn.addEventListener('click', () => {
-        isZoomed = !isZoomed;
-        if(isZoomed) {
-            // Utiliser une valeur absolue pour le zoom sur mobile pour éviter un zoom excessif
-            if(window.innerWidth <= 768) {
+        // En mode mobile, l'UI est déjà en mode scratch (défini par CSS)
+        if (window.innerWidth <= 768) {
+            // Le bouton ne contrôle que le zoom visuel global en mode mobile
+            isScratchMode = !isScratchMode; 
+            if(isScratchMode) {
                  turntableContainer.style.transform = "scale(1.2)";
             } else {
-                 turntableContainer.style.transform = "scale(1.5)";
+                 turntableContainer.style.transform = "scale(1)";
             }
-            zoomBtn.classList.add("zoom-active");
-        } else {
-            turntableContainer.style.transform = "scale(1)";
-            zoomBtn.classList.remove("zoom-active");
+            zoomBtn.classList.toggle("zoom-active");
+            zoomBtn.textContent = isScratchMode ? "Vue Centrée" : "Vue Scratch";
+            setTimeout(updateCenter, 550);
+            return;
         }
-        setTimeout(updateCenter, 550);
+
+        // En mode grand écran (Desktop), on contrôle à la fois le décalage (scratch mode) et le zoom
+        isScratchMode = !isScratchMode;
+        updateScratchModeUI();
     });
     
     // Initialisation
     setRPM("off");
+    // S'assurer que le mode d'affichage initial est correct (Scratch mode par défaut sur mobile)
+    updateScratchModeUI();
 
 </script>
 </body>
