@@ -34,10 +34,12 @@
 
     #turntable {
         position:relative;
-        width:80vmin;
-        height:80vmin;
-        max-width:700px;
-        max-height:700px;
+        /* ANCIEN: 80vmin */
+        width:90vmin;
+        height:90vmin;
+        /* ANCIEN: 700px */
+        max-width:900px; 
+        max-height:900px; 
         /* Couleur bois sombre */
         background: #634b32; 
         border-radius:12px;
@@ -522,8 +524,8 @@
     let currentBuffer = null; 
     
     // Calcul précis des degrés par frame (pour 60 FPS) :
-    // 33 1/3 RPM = 0.5555... RPS (rotations par seconde)
-    // 45 RPM = 0.75 RPS
+    // 33 1/3 RPM = 3.3333 degrés/frame
+    // 45 RPM = 4.5 degrés/frame
     const RPM_BASE_SPEED = {"33": 3.3333, "45": 4.5, "off": 0}; 
     const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // Vitesse en degrés par frame
 
@@ -716,8 +718,6 @@
         
         // Logique de vitesse DJ :
         // La nouvelle vitesse (velocity) est directement le dragDelta.
-        // On utilise la limite d'accélération pour que le changement soit doux,
-        // même en cas de mouvement de doigt très rapide.
         const requestedChange = dragDelta - velocity;
 
         const limitedChange = Math.max(
@@ -728,8 +728,6 @@
         velocity += limitedChange; 
         currentRotation += velocity; 
         
-        // IMPORTANT : Ne PAS mettre à jour targetBaseVelocity ici.
-        // La vitesse cible du moteur doit rester la RPM sélectionnée, même en scratch.
     });
 
     vinyl.addEventListener("pointerup", () => { 
@@ -746,7 +744,6 @@
         } else {
             // FIX DJ : Dès que le doigt est levé, la vitesse (velocity) 
             // revient INSTANTANÉMENT à la vitesse du moteur (targetBaseVelocity).
-            // Cela empêche la platine de s'emballer si la vitesse manuelle était trop élevée.
             velocity = targetBaseVelocity; 
         }
         vinyl.style.cursor = "grab";
@@ -761,7 +758,6 @@
     function engine(){ 
         if(!isDragging){ 
             // Transition progressive (accélération/décélération) VERS la vitesse cible (uniquement si on ne scratch pas)
-            // C'est ce qui gère le "spin up" et le "spin down" lors des changements de mode RPM.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
@@ -888,12 +884,14 @@
             zoomBtn.classList.add("active-state");
             zoomBtn.textContent = "Vue Centrée";
             if (window.innerWidth > 768) {
+                // Zoom visuel pour le grand écran
                 turntableContainer.style.transform = "scale(1.5)";
             }
         } else {
             vinyl.classList.remove('vinyl-scratch-mode');
             zoomBtn.classList.remove("active-state");
             zoomBtn.textContent = "Vue Scratch";
+            // Retour au zoom standard
             turntableContainer.style.transform = "scale(1)";
         }
         setTimeout(updateCenter, 550); 
@@ -903,6 +901,7 @@
         isScratchMode = !isScratchMode;
 
         if (window.innerWidth <= 768) {
+            // Logique de zoom pour mobile
             if(isScratchMode) {
                  turntableContainer.style.transform = "scale(1.2)";
             } else {
