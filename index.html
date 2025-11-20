@@ -105,8 +105,8 @@
         background: linear-gradient(to bottom, #b0b0b0 0%, #999 100%);
     }
     
-    /* État actif spécifique du bouton zoom */
-    .vintage-btn.zoom-active {
+    /* État actif spécifique du bouton zoom et direction */
+    .vintage-btn.active-state {
         background: linear-gradient(to bottom, #aaddff 0%, #6699cc 100%);
         box-shadow: inset 0 0 10px #3498db;
     }
@@ -229,6 +229,7 @@
     /* Conteneur RPM (Bas-Gauche) */
     #rpm-wrapper {
         position:absolute;
+        /* Position non-mobile (Desktop) */
         bottom: 5%;
         left: 5%;
         width: auto;
@@ -253,7 +254,7 @@
         font-weight: bold;
         color: #d0d0d0;
         text-shadow: 0 1px 2px black;
-        pointer-events: none;
+        pointer-events: none; 
     }
     
     .rpm-labels span {
@@ -340,7 +341,7 @@
         /* 2. Repositionnement des contrôles pour l'ergonomie mobile */
         
         .control-panel {
-            /* Boutons Arrêt/Zoom au milieu-haut */
+            /* Boutons Arrêt/Zoom/Sens au milieu-haut */
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
@@ -353,16 +354,40 @@
             font-size: 10px;
         }
 
+        /* --- AMÉLIORATION ERGONOMIQUE MOBILE: RPM --- */
         #rpm-wrapper {
-            /* Déplace le RPM légèrement vers le bas */
-            bottom: 15px;
+            /* Déplace le RPM PLUS HAUT pour ne pas être collé au bord */
+            bottom: 50px; 
             left: 10px;
             padding: 8px;
         }
+        
+        /* NOUVEAU: Augmenter la zone de clic RPM */
+        .rpm-choice {
+            /* Taille du point visible */
+            width: 20px; 
+            height: 20px;
+        }
+        
+        #rpm-controls {
+            /* Agrandir l'espace entre les points */
+            width: 120px; 
+        }
 
+        /* NOUVEAU: Créer une zone de clic invisible autour du point RPM */
+        .rpm-labels span {
+            /* Permet aux chiffres (45, ARRÊT, 33) de servir de zone de clic */
+            pointer-events: auto; /* Réactiver les événements de clic sur le texte */
+            cursor: pointer;
+            padding: 5px 0; /* Augmenter la zone tactile verticale */
+            width: 40px; /* Augmenter la zone tactile horizontale */
+            text-align: center;
+            font-size: 12px; /* Rendre le texte plus lisible */
+        }
+        
         #pitch-control {
-            /* Déplace le Pitch légèrement vers le bas */
-            bottom: 15px;
+            /* Déplace le Pitch PLUS HAUT pour ne pas être collé au bord */
+            bottom: 50px; 
             right: 10px;
             width: 100px; 
             padding: 5px;
@@ -390,6 +415,7 @@
         <div class="control-panel">
             <button id="stop-button" class="vintage-btn">Arrêt</button>
             <button id="zoom-button" class="vintage-btn">Vue Scratch</button>
+            <button id="direction-button" class="vintage-btn">Sens: Normal</button>
         </div>
         
         <!-- Contrôle de la vitesse (Pitch) (Bas-Droit) -->
@@ -430,9 +456,9 @@
         <div id="rpm-wrapper">
             <!-- 1. Étiquettes du haut (45 - OFF - 33) -->
             <div class="rpm-labels">
-                <span>45</span>
-                <span>ARRÊT</span>
-                <span>33</span>
+                <span data-rpm="45">45</span>
+                <span data-rpm="off">ARRÊT</span>
+                <span data-rpm="33">33</span>
             </div>
 
             <!-- 2. Contrôles de points au milieu -->
@@ -454,18 +480,20 @@
 
 <script>
     /* * Cette section contient le JavaScript pour la logique (équivalent de script.js)
+     * Logique mise à jour pour le contrôle DJ/Scratch
      */
     const vinyl = document.getElementById("vinyl");
     const rpmImg = document.getElementById("rpm-img");
     const rpmChoices = document.querySelectorAll('.rpm-choice');
+    const rpmLabels = document.querySelectorAll('.rpm-labels span'); 
     const stopBtn = document.getElementById('stop-button');
     const zoomBtn = document.getElementById('zoom-button');
+    const directionBtn = document.getElementById('direction-button');
     const turntableContainer = document.getElementById('turntable-container');
     const pitchSlider = document.getElementById('pitch-slider');
     const audioErrorDiv = document.getElementById('audio-error'); 
     
-    // Les références Gemini ont été retirées
-
+    // VARIABLES D'ÉTAT
     let currentRotation = 0;
     let velocity = 0;
     let targetBaseVelocity = 0; 
@@ -473,47 +501,77 @@
     let isDragging = false;
     let lastAngle = 0;
     let center = {x:0, y:0};
-    
+    let rpmMode = "off";
+
+    // Contrôle de la direction (1 pour Normal, -1 pour Inversé)
+    let directionFactor = 1;
+
     // Constantes de physique
     const returnStrength = 0.08; 
     const dragSensitivity = 3.0; 
     const MAX_PLAYBACK_RATE = 2.5; 
     const MAX_SCRATCH_ACCELERATION = 0.5; 
 
-    // Nouveau : État pour le mode Scratch/Décalé
-    let isScratchMode = false;
-    // Si l'écran est petit, le mode scratch est activé par défaut.
-    if (window.innerWidth <= 768) {
-        isScratchMode = true;
-    }
-
+    // État pour le mode Scratch/Décalé (par défaut sur mobile)
+    let isScratchMode = (window.innerWidth <= 768);
 
     // État Audio
     let audioCuePointSeconds = 0; 
     let isPlaying = false; 
     let audioDurationSeconds = 0; 
+    let currentBuffer = null; 
     
-    let rpmMode = "off";
     // Calcul précis des degrés par frame (pour 60 FPS) :
-    const RPM_BASE_SPEED = {"33": 360 / 60 / 60 * (100 / 3), "45": 4.5, "off": 0}; 
-    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; 
+    // 33 1/3 RPM = 0.5555... RPS (rotations par seconde)
+    // 45 RPM = 0.75 RPS
+    const RPM_BASE_SPEED = {"33": 3.3333, "45": 4.5, "off": 0}; 
+    const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // Vitesse en degrés par frame
 
     // Configuration Audio
     let audioCtx = null;
-    let buffer = null;
+    let normalBuffer = null; // Le buffer normal
+    let reverseBuffer = null; // Le buffer inversé
     let source = null;
     // URL AUDIO
     const audioURL = "https://tclaret.github.io/turntable/JB.mp3"; 
+
 
     function initAudio(){ 
         if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); 
     }
     
     /**
+     * Inverse les données d'un AudioBuffer et stocke le résultat.
+     */
+    function createReverseBuffer(originalBuffer) {
+        if (!audioCtx) return null;
+
+        const numChannels = originalBuffer.numberOfChannels;
+        const length = originalBuffer.length;
+        const reversed = audioCtx.createBuffer(numChannels, length, originalBuffer.sampleRate);
+
+        for (let i = 0; i < numChannels; i++) {
+            const originalData = originalBuffer.getChannelData(i);
+            const reversedData = reversed.getChannelData(i);
+
+            for (let j = 0; j < length; j++) {
+                // Copie l'échantillon N à la position (Longueur - 1 - N)
+                reversedData[j] = originalData[length - 1 - j];
+            }
+        }
+        return reversed;
+    }
+
+    /**
      * Convertit la rotation visuelle (en degrés) en un décalage audio (en secondes).
      */
     function rotationToAudioOffset(degrees, duration) {
-        let offset = (degrees * duration / 360) % duration;
+        // Normalise la rotation pour rester entre 0 et 360 (une révolution)
+        const normalizedDegrees = degrees % 360;
+        // Calcul du temps écoulé pour cette rotation
+        let offset = (normalizedDegrees * duration / 360);
+        
+        // S'assurer que l'offset est positif
         if (offset < 0) {
             offset += duration;
         }
@@ -530,41 +588,57 @@
             await audioCtx.resume();
         }
 
-        if(!buffer) {
+        // Chargement initial du buffer si nécessaire
+        if(!normalBuffer) {
             try {
                 const res = await fetch(audioURL); 
-                // Vérifier si la réponse est un succès HTTP (statut 200-299)
                 if(!res.ok) throw new Error("Audio file not found: " + audioURL);
                 const arr = await res.arrayBuffer(); 
-                buffer = await audioCtx.decodeAudioData(arr); 
-                audioDurationSeconds = buffer.duration; 
+                normalBuffer = await audioCtx.decodeAudioData(arr); 
+                
+                // CRÉATION DU BUFFER INVERSÉ
+                reverseBuffer = createReverseBuffer(normalBuffer); 
+                
+                audioDurationSeconds = normalBuffer.duration; 
                 audioErrorDiv.style.display = 'none'; 
             } catch(e) {
                 console.error("Échec du chargement ou du décodage audio:", e);
-                // Mettre à jour le message d'erreur avec l'URL complète
                 audioErrorDiv.innerHTML = `ERREUR AUDIO : Fichier <br> ${audioURL} <br> introuvable.`; 
                 audioErrorDiv.style.display = 'block'; 
                 return; 
             }
         }
         
+        // Définir le buffer actuel en fonction du mode de direction
+        currentBuffer = directionFactor === 1 ? normalBuffer : reverseBuffer;
+
         if(source) {
             try { source.stop(); } catch(e){}
         }
 
+        // Taux de lecture initial pour l'AudioBuffer (toujours positif)
         const rpmSpeed = RPM_BASE_SPEED[rpmMode];
         let initialRate = (rpmSpeed / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
         if (rpmMode === 'off' || NORMAL_RPM_VELOCITY === 0) initialRate = 1.0 * currentPitchFactor;
+        
+        initialRate = Math.abs(initialRate); 
         initialRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, initialRate)); 
 
         source = audioCtx.createBufferSource(); 
-        source.buffer = buffer; 
+        source.buffer = currentBuffer; 
         source.loop = true; 
         
         source.playbackRate.value = initialRate; 
         source.connect(audioCtx.destination); 
         
-        source.start(0, audioCuePointSeconds); 
+        // Le point de départ doit être recalculé car le buffer inversé est utilisé
+        let startOffset = audioCuePointSeconds;
+        if (directionFactor === -1) {
+            // Si en mode Inversé, on démarre du point dans le buffer inversé qui correspond au point de cue NORMAL
+            startOffset = (audioDurationSeconds - audioCuePointSeconds) % audioDurationSeconds;
+        }
+
+        source.start(0, startOffset); 
         isPlaying = true;
     }
 
@@ -572,9 +646,13 @@
      * Arrête l'audio et sauvegarde le point de cue actuel.
      */
     function stopAudio() {
-        if(source && audioCtx && buffer) {
+        if(source && audioCtx && normalBuffer) {
             try { 
-                audioCuePointSeconds = rotationToAudioOffset(currentRotation, buffer.duration);
+                // Sauvegarder le point de cue par rapport au buffer NORMAL
+                // On utilise la rotation actuelle et on la corrige par le facteur de direction
+                // (la rotation négative en mode inversé correspond à un temps positif en mode normal)
+                audioCuePointSeconds = rotationToAudioOffset(currentRotation * directionFactor, normalBuffer.duration);
+                
                 source.stop(); 
             } catch(e){
                 console.error("Erreur lors de l'arrêt de la source audio:", e);
@@ -595,21 +673,21 @@
 
     /**
      * Calcule l'angle du pointeur par rapport au centre de la platine.
-     * L'angle est entre -180 et 180 degrés. 0° = droite, 90° = haut.
      */
     function getAngle(e){ 
         return Math.atan2(e.clientY - center.y, e.clientX - center.x) * 180 / Math.PI; 
     }
 
     vinyl.addEventListener("pointerdown", async e => { 
-        const angle = getAngle(e);
+        e.preventDefault(); 
         
-        // Zone de Scratch Côté Gauche (90° à 180° ET -180° à -90°)
+        const angle = getAngle(e);
+        // Zone de Scratch : Côté gauche du vinyle (sur l'écran)
         const isInScratchZone = (angle >= 90) || (angle <= -90);
 
         if (isInScratchZone) {
-            // Mode Scratch activé
             if(!isPlaying && rpmMode !== 'off') {
+                 // Démarrer l'audio si on est en mode RPM actif (pour que le son suive)
                  await startPlayback(); 
             }
             
@@ -618,7 +696,6 @@
             vinyl.setPointerCapture(e.pointerId); 
             vinyl.style.cursor = "grabbing";
         } else {
-            // Clic en dehors de la zone de scratch. Le mouvement de la souris n'aura pas d'effet.
             isDragging = false; 
             vinyl.setPointerCapture(e.pointerId); 
             vinyl.style.cursor = "grab";
@@ -626,7 +703,6 @@
     });
 
     vinyl.addEventListener("pointermove", e => { 
-        // Le mouvement n'est traité que si isDragging est VRAI (défini dans pointerdown)
         if(!isDragging) return; 
         if(!isPlaying) return; 
 
@@ -638,10 +714,12 @@
         
         const dragDelta = delta * dragSensitivity; 
         
-        // Calculer la différence de vitesse demandée
+        // Logique de vitesse DJ :
+        // La nouvelle vitesse (velocity) est directement le dragDelta.
+        // On utilise la limite d'accélération pour que le changement soit doux,
+        // même en cas de mouvement de doigt très rapide.
         const requestedChange = dragDelta - velocity;
 
-        // APPLIQUER LA LIMITE D'ACCÉLÉRATION (Slew Rate Limiter)
         const limitedChange = Math.max(
             -MAX_SCRATCH_ACCELERATION, 
             Math.min(MAX_SCRATCH_ACCELERATION, requestedChange)
@@ -649,49 +727,55 @@
 
         velocity += limitedChange; 
         currentRotation += velocity; 
-        targetBaseVelocity = velocity; 
+        
+        // IMPORTANT : Ne PAS mettre à jour targetBaseVelocity ici.
+        // La vitesse cible du moteur doit rester la RPM sélectionnée, même en scratch.
     });
 
     vinyl.addEventListener("pointerup", () => { 
         isDragging = false; 
-        // Revenir à la vitesse RPM cible, modulée par le pitch
+        
+        // Recalculer la vitesse cible du moteur (+/- 33/45 RPM)
         updateTargetVelocity(); 
-        vinyl.style.cursor = "grab";
         
         if(rpmMode === 'off') {
             stopAudio(); 
             currentRotation = 0;
-            // On s'assure que la translation CSS est correcte après l'arrêt
+            velocity = 0; // Arrêt instantané
             vinyl.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+        } else {
+            // FIX DJ : Dès que le doigt est levé, la vitesse (velocity) 
+            // revient INSTANTANÉMENT à la vitesse du moteur (targetBaseVelocity).
+            // Cela empêche la platine de s'emballer si la vitesse manuelle était trop élevée.
+            velocity = targetBaseVelocity; 
         }
+        vinyl.style.cursor = "grab";
     });
     
     // --- Calcul de la vitesse cible ---
     function updateTargetVelocity() {
-        if (!isDragging) {
-            targetBaseVelocity = RPM_BASE_SPEED[rpmMode] * currentPitchFactor;
-        }
+        // La vitesse cible du moteur tient compte du mode RPM et du sens de lecture
+        targetBaseVelocity = RPM_BASE_SPEED[rpmMode] * currentPitchFactor * directionFactor;
     }
 
     function engine(){ 
         if(!isDragging){ 
-            // Transition progressive (accélération/décélération) vers la vitesse cible
+            // Transition progressive (accélération/décélération) VERS la vitesse cible (uniquement si on ne scratch pas)
+            // C'est ce qui gère le "spin up" et le "spin down" lors des changements de mode RPM.
             velocity += (targetBaseVelocity - velocity) * returnStrength; 
         } 
         
         currentRotation += velocity; 
         
-        // Applique la rotation ET la translation nécessaire pour le mode Scratch
         const rotationTransform = `rotate(${currentRotation}deg)`;
         const baseTranslate = 'translate(-50%, -50%)';
         vinyl.style.transform = `${baseTranslate} ${rotationTransform}`;
         
         // Mise à jour de la vitesse de lecture audio (Pitch Shift)
         if(source && audioCtx && isPlaying){ 
+            // Le taux de lecture est basé sur la valeur absolue de la vitesse actuelle (velocity)
+            let targetRate = (Math.abs(velocity) / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
             
-            let targetRate = (velocity / NORMAL_RPM_VELOCITY) * currentPitchFactor; 
-            
-            // LIMITER LA VITESSE MAXIMALE DU SON
             const finalRate = Math.max(0.01, Math.min(MAX_PLAYBACK_RATE, targetRate)); 
             
             source.playbackRate.value = finalRate; 
@@ -714,7 +798,11 @@
             
             if (isStartingNew) {
                 startPlayback(); 
-            } 
+            } else {
+                // Redémarrer l'audio pour s'assurer que le nouveau taux est pris en compte
+                stopAudio();
+                startPlayback();
+            }
 
         } else {
             // Mode Arrêt
@@ -722,7 +810,7 @@
             stopAudio(); 
         }
 
-        // Mettre à jour l'interface utilisateur
+        // Mettre à jour l'interface utilisateur (points et labels)
         rpmChoices.forEach(c => c.classList.remove('active'));
         document.querySelector(`.rpm-choice[data-rpm='${mode}']`).classList.add('active');
         
@@ -732,7 +820,48 @@
         else rpmImg.style.transform = "rotate(0deg)";
     }
 
+    // --- Logique de Contrôle de la Direction (Sens) ---
+    function toggleDirection() {
+        // Inversion de la direction
+        directionFactor *= -1; 
+
+        // Mise à jour du bouton
+        if (directionFactor === -1) {
+            directionBtn.textContent = "Sens: Inversé";
+            directionBtn.classList.add("active-state");
+        } else {
+            directionBtn.textContent = "Sens: Normal";
+            directionBtn.classList.remove("active-state");
+        }
+        
+        // Recalcul de la vitesse cible
+        updateTargetVelocity();
+
+        // Stoppe l'audio, sauvegarde le cue point NORMAL, et redémarre avec le nouveau buffer (Normal ou Inversé)
+        if (isPlaying || rpmMode !== 'off') {
+            stopAudio();
+            startPlayback(); 
+        } else {
+             // Si à l'arrêt, on ne fait que mettre à jour la velocity (qui est 0) pour préparer le spin up
+             velocity = targetBaseVelocity;
+        }
+    }
+
+
+    // --- Écouteurs d'événements ---
+    
+    // Écouteurs pour les POINTS et LABELS RPM
     rpmChoices.forEach(c => c.addEventListener('click', () => { setRPM(c.dataset.rpm); }));
+    rpmLabels.forEach(l => l.addEventListener('click', (e) => {
+        const mode = e.target.dataset.rpm;
+        if (mode) {
+            setRPM(mode);
+        }
+    }));
+
+    // Écouteur pour le nouveau bouton de direction
+    directionBtn.addEventListener('click', toggleDirection);
+
 
     // --- Logique du Slider Pitch ---
     pitchSlider.addEventListener('input', () => {
@@ -740,6 +869,10 @@
         currentPitchFactor = 1.0 + percentageChange;
         
         updateTargetVelocity(); 
+        // Si en lecture, on applique la nouvelle vitesse immédiatement
+        if (isPlaying || rpmMode !== 'off') {
+            velocity = targetBaseVelocity;
+        }
     });
 
 
@@ -747,51 +880,45 @@
     stopBtn.addEventListener('click', () => {
         setRPM("off"); 
     });
-    
-    // --- Logique du Bouton Vue Scratch (Deux niveaux de zoom pour grand écran) ---
+
+    // --- Logique du Bouton Vue Scratch (Zoom) ---
     function updateScratchModeUI() {
         if(isScratchMode) {
             vinyl.classList.add('vinyl-scratch-mode');
-            zoomBtn.classList.add("zoom-active");
+            zoomBtn.classList.add("active-state");
             zoomBtn.textContent = "Vue Centrée";
-            // Zoom visuel de la platine pour la mise au point (1.5 pour grand écran)
             if (window.innerWidth > 768) {
                 turntableContainer.style.transform = "scale(1.5)";
             }
         } else {
             vinyl.classList.remove('vinyl-scratch-mode');
-            zoomBtn.classList.remove("zoom-active");
+            zoomBtn.classList.remove("active-state");
             zoomBtn.textContent = "Vue Scratch";
-            // Retour au zoom standard
             turntableContainer.style.transform = "scale(1)";
         }
-        setTimeout(updateCenter, 550); // Mettre à jour le centre après la transition
+        setTimeout(updateCenter, 550); 
     }
 
     zoomBtn.addEventListener('click', () => {
-        // En mode mobile, l'UI est déjà en mode scratch (défini par CSS)
+        isScratchMode = !isScratchMode;
+
         if (window.innerWidth <= 768) {
-            // Le bouton ne contrôle que le zoom visuel global en mode mobile
-            isScratchMode = !isScratchMode; 
             if(isScratchMode) {
                  turntableContainer.style.transform = "scale(1.2)";
             } else {
                  turntableContainer.style.transform = "scale(1)";
             }
-            zoomBtn.classList.toggle("zoom-active");
+            zoomBtn.classList.toggle("active-state");
             zoomBtn.textContent = isScratchMode ? "Vue Centrée" : "Vue Scratch";
             setTimeout(updateCenter, 550);
             return;
         }
 
-        // En mode grand écran (Desktop), on contrôle à la fois le décalage (scratch mode) et le zoom
-        isScratchMode = !isScratchMode;
         updateScratchModeUI();
     });
     
     // Initialisation
     setRPM("off");
-    // S'assurer que le mode d'affichage initial est correct (Scratch mode par défaut sur mobile)
     updateScratchModeUI();
 
 </script>
