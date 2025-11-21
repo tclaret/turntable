@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Vinyl Scratching</title>
+<title>About Scratching some vinyl ? </title>
 
 <!-- FAVICON -->
 <link rel="icon" type="image/x-icon" href="img/favicon.ico">
@@ -26,6 +26,7 @@
         color:white;
         user-select:none;
         overflow: hidden;
+        padding: 20px; /* Ajout d'une marge pour éviter le clipping des contrôles zoomés */
     }
 
     #turntable-container {
@@ -34,10 +35,9 @@
 
     #turntable {
         position:relative;
-        /* ANCIEN: 80vmin */
+        /* Taille augmentée */
         width:90vmin;
         height:90vmin;
-        /* ANCIEN: 700px */
         max-width:900px; 
         max-height:900px; 
         /* Couleur bois sombre */
@@ -244,7 +244,32 @@
         padding: 10px;
         border-radius: 8px;
         border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.3s ease-in-out; /* Pour l'effet d'agrandissement */
     }
+    
+    /* NOUVELLE CLASSE : Agrandissement en mode Scratch */
+    #rpm-wrapper.rpm-enlarged {
+        padding: 15px; 
+    }
+    
+    #rpm-wrapper.rpm-enlarged .rpm-labels {
+        width: 120px; 
+        font-size: 12px; 
+    }
+
+    #rpm-wrapper.rpm-enlarged #rpm-controls {
+        width: 120px; 
+    }
+
+    #rpm-wrapper.rpm-enlarged .rpm-choice {
+        width: 20px; 
+        height: 20px;
+    }
+
+    #rpm-wrapper.rpm-enlarged #rpm-img {
+        width: 40px; 
+    }
+
 
     /* 1. Étiquettes du haut (45 - OFF - 33) */
     .rpm-labels {
@@ -312,6 +337,7 @@
             /* Permet à la platine d'occuper plus de hauteur sur les téléphones */
             justify-content: flex-start; 
             padding-top: 5vh;
+            padding: 10px; /* Moins de padding sur mobile */
         }
 
         #turntable {
@@ -494,6 +520,8 @@
     const turntableContainer = document.getElementById('turntable-container');
     const pitchSlider = document.getElementById('pitch-slider');
     const audioErrorDiv = document.getElementById('audio-error'); 
+    const rpmWrapper = document.getElementById('rpm-wrapper'); // Référence au wrapper RPM
+
     
     // VARIABLES D'ÉTAT
     let currentRotation = 0;
@@ -535,7 +563,8 @@
     let reverseBuffer = null; // Le buffer inversé
     let source = null;
     // URL AUDIO
-    const audioURL = "https://tclaret.github.io/turntable/JB_Cold_Sweat.opus"; 
+    const audioURL = "https://tclaret.github.io/turntable/JB.mp3"; 
+
 
     function initAudio(){ 
         if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); 
@@ -882,6 +911,8 @@
             vinyl.classList.add('vinyl-scratch-mode');
             zoomBtn.classList.add("active-state");
             zoomBtn.textContent = "Vue Centrée";
+            rpmWrapper.classList.add('rpm-enlarged'); // AJOUT : Agrandir le RPM
+
             if (window.innerWidth > 768) {
                 // Zoom visuel pour le grand écran
                 turntableContainer.style.transform = "scale(1.5)";
@@ -890,6 +921,8 @@
             vinyl.classList.remove('vinyl-scratch-mode');
             zoomBtn.classList.remove("active-state");
             zoomBtn.textContent = "Vue Scratch";
+            rpmWrapper.classList.remove('rpm-enlarged'); // RETRAIT : Revenir à la taille normale
+
             // Retour au zoom standard
             turntableContainer.style.transform = "scale(1)";
         }
@@ -908,6 +941,9 @@
             }
             zoomBtn.classList.toggle("active-state");
             zoomBtn.textContent = isScratchMode ? "Vue Centrée" : "Vue Scratch";
+            // AJOUT : Agrandissement/réduction de RPM sur mobile
+            rpmWrapper.classList.toggle('rpm-enlarged', isScratchMode); 
+
             setTimeout(updateCenter, 550);
             return;
         }
