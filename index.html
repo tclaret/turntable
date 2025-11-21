@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>About Scratching some vinyl ? </title>
+<title>Scratching Vinyl</title>
 
 <!-- FAVICON -->
 <link rel="icon" type="image/x-icon" href="img/favicon.ico">
@@ -218,7 +218,7 @@
     }
     #vinyl:active { cursor:grabbing; }
 
-    /* CLASSE POUR LE DÉCALAGE (Zoom 2 / mode Scratch) */
+    /* CLASSE POUR LE DÉCALAGE (Zoom 2 / mode Scratch - principalement pour Desktop) */
     .vinyl-scratch-mode {
         /* Rend le vinyle 1.25x plus grand que le plateau (pour le débordement) */
         width: 125% !important; 
@@ -351,20 +351,19 @@
                 0 10px 30px rgba(0,0,0,0.8);
         }
 
-        /* En mode mobile, le mode scratch est le mode par défaut pour la visibilité du vinyle */
+        /* DÉFAUT MOBILE: Vue Scratch (pour une meilleure zone de scratch) */
         #vinyl {
             width: 125%; 
             height: 125%; 
             left: 62.5%; 
         }
         
-        /* Retirer la classe scratch si elle est ajoutée, elle est redondante en mode mobile */
-        #vinyl.vinyl-scratch-mode {
-             width: 125%; 
-             height: 125%; 
-             left: 62.5%; 
+        /* NOUVELLE CLASSE POUR LA VUE CENTRÉE SUR MOBILE */
+        #vinyl.mobile-centered-mode {
+            width: 85% !important; /* Revenir à la taille Desktop par défaut */
+            height: 85% !important; 
+            left: 50% !important; /* Revenir au centre */
         }
-
 
         /* 2. Repositionnement des contrôles pour l'ergonomie mobile */
         
@@ -520,7 +519,7 @@
     const turntableContainer = document.getElementById('turntable-container');
     const pitchSlider = document.getElementById('pitch-slider');
     const audioErrorDiv = document.getElementById('audio-error'); 
-    const rpmWrapper = document.getElementById('rpm-wrapper'); // Référence au wrapper RPM
+    const rpmWrapper = document.getElementById('rpm-wrapper'); 
 
     
     // VARIABLES D'ÉTAT
@@ -552,15 +551,13 @@
     let currentBuffer = null; 
     
     // Calcul précis des degrés par frame (pour 60 FPS) :
-    // 33 1/3 RPM = 3.3333 degrés/frame
-    // 45 RPM = 4.5 degrés/frame
     const RPM_BASE_SPEED = {"33": 3.3333, "45": 4.5, "off": 0}; 
     const NORMAL_RPM_VELOCITY = RPM_BASE_SPEED["33"]; // Vitesse en degrés par frame
 
     // Configuration Audio
     let audioCtx = null;
-    let normalBuffer = null; // Le buffer normal
-    let reverseBuffer = null; // Le buffer inversé
+    let normalBuffer = null; 
+    let reverseBuffer = null; 
     let source = null;
     // URL AUDIO
     const audioURL = "https://tclaret.github.io/turntable/JB.mp3"; 
@@ -745,7 +742,6 @@
         const dragDelta = delta * dragSensitivity; 
         
         // Logique de vitesse DJ :
-        // La nouvelle vitesse (velocity) est directement le dragDelta.
         const requestedChange = dragDelta - velocity;
 
         const limitedChange = Math.max(
@@ -907,51 +903,53 @@
 
     // --- Logique du Bouton Vue Scratch (Zoom) ---
     function updateScratchModeUI() {
+        const isMobile = window.innerWidth <= 768;
+
         if(isScratchMode) {
+            // ACTIVER VUE SCRATCH
             vinyl.classList.add('vinyl-scratch-mode');
+            vinyl.classList.remove('mobile-centered-mode'); // Assurer que le centré est retiré
             zoomBtn.classList.add("active-state");
             zoomBtn.textContent = "Vue Centrée";
-            rpmWrapper.classList.add('rpm-enlarged'); // AJOUT : Agrandir le RPM
+            rpmWrapper.classList.add('rpm-enlarged'); 
 
-            if (window.innerWidth > 768) {
+            if (!isMobile) {
                 // Zoom visuel pour le grand écran
                 turntableContainer.style.transform = "scale(1.5)";
+            } else {
+                 // N'applique pas de zoom sur mobile pour garder les contrôles visibles
+                 turntableContainer.style.transform = "scale(1)"; 
             }
         } else {
+            // ACTIVER VUE CENTRÉE
             vinyl.classList.remove('vinyl-scratch-mode');
             zoomBtn.classList.remove("active-state");
             zoomBtn.textContent = "Vue Scratch";
-            rpmWrapper.classList.remove('rpm-enlarged'); // RETRAIT : Revenir à la taille normale
+            rpmWrapper.classList.remove('rpm-enlarged'); 
+            
+            if (isMobile) {
+                // Application de la vue Centrée spécifique pour mobile pour annuler le défaut CSS
+                vinyl.classList.add('mobile-centered-mode');
+            } else {
+                 vinyl.classList.remove('mobile-centered-mode');
+            }
 
-            // Retour au zoom standard
+            // Retour au zoom standard (1.0x)
             turntableContainer.style.transform = "scale(1)";
         }
         setTimeout(updateCenter, 550); 
     }
 
+
     zoomBtn.addEventListener('click', () => {
         isScratchMode = !isScratchMode;
-
-        if (window.innerWidth <= 768) {
-            // Logique de zoom pour mobile
-            if(isScratchMode) {
-                 turntableContainer.style.transform = "scale(1.2)";
-            } else {
-                 turntableContainer.style.transform = "scale(1)";
-            }
-            zoomBtn.classList.toggle("active-state");
-            zoomBtn.textContent = isScratchMode ? "Vue Centrée" : "Vue Scratch";
-            // AJOUT : Agrandissement/réduction de RPM sur mobile
-            rpmWrapper.classList.toggle('rpm-enlarged', isScratchMode); 
-
-            setTimeout(updateCenter, 550);
-            return;
-        }
-
-        updateScratchModeUI();
+        // La fonction updateScratchModeUI gère maintenant la logique desktop/mobile
+        updateScratchModeUI(); 
     });
     
     // Initialisation
+    // Définir l'état initial du mode scratch (défaut: actif sur mobile, inactif sur desktop)
+    isScratchMode = (window.innerWidth <= 768);
     setRPM("off");
     updateScratchModeUI();
 
