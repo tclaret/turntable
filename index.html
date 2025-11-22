@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Platine Vinyle Interactive Complète v6</title>
+<title>Platine Vinyle Interactive Complète v7</title>
 
 <!-- Tailwind CSS et Tone.js pour l'audio avancé -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -268,7 +268,7 @@
         // --- ÉTATS GLOBAUX ---
         let currentMode = "off";
         let pitchFactor = 1.0;
-        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé
+        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé (détermine le signe de playbackRate)
         let targetBaseVelocity = 0; // Vitesse de lecture du moteur (RPM seulement)
         
         let isScratchMode = false; // False = Vue Centrée, True = Vue Zoom/Scratch
@@ -297,13 +297,13 @@
 
         // --- CONFIGURATION AUDIO TONE.JS ---
         let player = null;
-        let normalBuffer = null;
-        let reverseBuffer = null;
+        let normalBuffer = null; // Nous n'utiliserons qu'un seul buffer
         let audioContextStarted = false;
         
         // Fonction pour charger l'audio
         async function loadAudio() {
             statusMessage.textContent = "Chargement de la piste...";
+            // L'URL spécifiée par l'utilisateur
             const audioUrl = "https://tclaret.github.io/turntable/JB_Cold_Sweat.opus";
             
             try {
@@ -311,25 +311,20 @@
                 normalBuffer = await new Tone.Buffer(audioUrl, 
                     // Succès
                     () => {
-                        statusMessage.textContent = "Piste chargée. Préparation pour le Scratch...";
+                        statusMessage.textContent = "Piste chargée. Prêt à jouer !";
                         
-                        // 2. Créer le buffer inversé (Reverse Playback)
+                        // 2. Créer le lecteur Tone.js (une fois le buffer chargé)
                         try {
-                            const array = normalBuffer.get().getChannelData(0);
-                            const reversedArray = Array.from(array).reverse();
-                            // Créer un Tone.Buffer à partir des données inversées
-                            reverseBuffer = new Tone.Buffer(new Float32Array(reversedArray));
-                            
-                            // 3. Créer le lecteur Tone.js
                             player = new Tone.Player(normalBuffer).toDestination();
                             player.loop = true;
-                            player.playbackRate = 0; 
-                            player.start(0); // Démarrer la lecture silencieuse au temps 0
+                            player.playbackRate = 0; // Initialement à l'arrêt
+                            // Démarrer le lecteur pour qu'il soit prêt à jouer dès que rate > 0 ou < 0
+                            player.start(0); 
                             
                             statusMessage.textContent = "Prêt. Cliquez sur 33 ou 45 !";
                         } catch (e) {
-                            console.error("Erreur lors de la création du buffer inversé ou du lecteur:", e);
-                            statusMessage.textContent = "Erreur (Buffer Inversé).";
+                            console.error("Erreur lors de la création du lecteur Tone.js:", e);
+                            statusMessage.textContent = "Erreur (Lecteur Audio).";
                         }
                     },
                     // Erreur
@@ -348,15 +343,17 @@
 
         // Met à jour la vitesse de lecture audio en fonction du RPM, du Pitch et de la Direction
         const updatePlaybackRate = () => {
-            if (!player) return;
+            if (!player || !player.loaded) return;
 
             let finalRate = 0;
             
             if (isScratching) {
                 // En mode scratch, on utilise la vitesse instantanée du doigt (currentVelocity)
-                finalRate = currentVelocity; 
+                // On préserve le sens de lecture du disque pour les calculs de vitesse
+                finalRate = currentVelocity * directionFactor; 
             } else {
                 // Vitesse du moteur: RPM * Pitch * Direction
+                // Si directionFactor est -1.0, finalRate devient négatif, jouant l'audio à l'envers
                 finalRate = targetBaseVelocity * pitchFactor * directionFactor;
             }
             
@@ -387,7 +384,7 @@
             } else {
                 targetBaseVelocity = RPM_RATES[mode];
                 currentRpmDisplay.textContent = mode + ' tours';
-                statusMessage.textContent = "En Lecture";
+                statusMessage.textContent = (directionFactor > 0) ? "En Lecture" : "Lecture Inversée";
             }
 
             // Mettre à jour la vitesse de lecture (qui gère l'audio)
@@ -407,25 +404,20 @@
         directionButton.addEventListener('click', () => {
             directionFactor *= -1; // Basculer entre 1.0 et -1.0
             
-            // 1. Mise à jour du buffer (lecture normale ou inversée)
-            if (player && normalBuffer && reverseBuffer) {
-                player.buffer = directionFactor === -1.0 ? reverseBuffer : normalBuffer;
-            } else {
-                console.warn("Buffers non prêts pour l'inversion.");
-            }
-
-            // 2. Mise à jour de l'interface
+            // Mise à jour de l'interface
             if (directionFactor === 1.0) {
                 directionButton.textContent = 'Sens: Normal';
                 directionButton.classList.remove('bg-red-700');
                 directionButton.classList.add('bg-gray-600');
+                if (currentMode !== 'off') statusMessage.textContent = 'En Lecture';
             } else {
                 directionButton.textContent = 'Sens: Inversé';
                 directionButton.classList.remove('bg-gray-600');
                 directionButton.classList.add('bg-red-700');
+                if (currentMode !== 'off') statusMessage.textContent = 'Lecture Inversée';
             }
 
-            // 3. Mise à jour de la vitesse
+            // Mise à jour de la vitesse (la rate négative gère l'audio inversé)
             updatePlaybackRate();
         });
 
@@ -544,7 +536,7 @@
                 currentVelocity *= VELOCITY_DECAY;
             } else if (currentMode !== 'off' || Math.abs(currentAudioRate) > 0.0001) {
                 // Rotation par le moteur (basée sur la vitesse audio actuelle)
-                // Le facteur 5 permet d'avoir une rotation réaliste (environ 1 tour/sec à rate=1.0)
+                // La rotation visuelle doit aussi suivre la direction
                 visualSpeed = currentAudioRate * 5; 
             } else {
                 // Arrêt complet
