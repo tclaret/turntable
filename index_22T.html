@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Scrating Vinyl!..  v28</title>
+<title>Platine Vinyle Interactive Complète v26</title>
 
 <!-- Tailwind CSS et Tone.js -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -43,16 +43,17 @@
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         overflow: hidden;
-        /* Suppression de la transition transform sur le conteneur principal */
+        /* Démarre sans transform, le body se charge du centrage */
+        transition: transform 0.5s ease; 
         z-index: 100; 
     }
 
-    /* Styles pour le VINYL */
+    /* Styles pour le VINYLE */
     #vinyl-image {
         position: absolute;
         top: 50%;
         left: 50%;
-        /* Centrage du disque à l'intérieur du conteneur (la rotation et le scale seront appliqués en JS) */
+        /* Centrage du disque à l'intérieur du conteneur */
         transform: translate(-50%, -50%); 
         
         /* Garde le disque à 96% de la taille du plateau pour qu'il soit visible en entier */
@@ -61,18 +62,17 @@
         
         border-radius: 50%;
         
-        /* Image du Vinyl */
+        /* Image de vinyle */
         background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
         background-size: cover;
         background-position: center;
         
-        border: 2px solid #111;
+        border: 1px solid #111;
         box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 20px rgba(0, 0, 0, 0.9);
         z-index: 10;
         cursor: grab;
         touch-action: none; 
-        /* Garde la transition pour le décalage horizontal (left) et la taille (width/height) */
-        transition: left 0.5s ease-in-out, width 0.5s ease-in-out, height 0.5s ease-in-out; 
+        transition: left 0.5s ease-in-out, width 0.5s ease-in-out, height 0.5s ease-in-out;
     }
     
     /* Classes dynamiques pour le mode Scratch */
@@ -80,7 +80,7 @@
     /* Desktop : Décalage léger */
     .vinyl-scratch-desktop {
         left: 62.5% !important;
-        /* Le scale pour le zoom est appliqué en JS (pour pouvoir le combiner avec la rotation) */
+        /* Le scale appliqué sur le conteneur principal gère l'agrandissement */
     }
 
     /* Mobile : Décalage et Agrandissement pour sortir du cadre */
@@ -341,7 +341,6 @@
         let directionFactor = 1.0; 
         let targetBaseVelocity = 0; 
         let isScratchMode = false; 
-        let visualZoomFactor = 1.0; // Facteur de zoom visuel pour le disque
         
         // Scratch
         let isScratching = false;
@@ -352,7 +351,6 @@
         const ANGULAR_MULTIPLIER = 0.3; 
         const VISUAL_RPM_MULTIPLIER = 3.3333; 
         const REVERSE_SEEK_OFFSET = 0.05; 
-        const DESKTOP_ZOOM_SCALE = 1.7; // Facteur de zoom pour le disque en mode bureau
         
         // Audio
         let player = null;
@@ -376,7 +374,7 @@
         const rpmWrapper = document.getElementById('rpm-wrapper');
         const pitchWrapper = document.getElementById('pitch-wrapper');
         const overlayBox = document.getElementById('overlay-box');
-        // audioErrorDiv n'est pas utilisé dans cette version
+        const audioErrorDiv = document.getElementById('audio-error');
 
         // --- OVERLAY ---
         const showOverlayBriefly = () => {
@@ -434,19 +432,6 @@
             if (!player || !player.loaded) return;
             if (currentMode === mode && mode !== 'off') return; 
 
-            // FIX: Démarrer le contexte audio au premier clic sur RPM, pas seulement au scratch
-            if (!audioContextStarted && mode !== 'off') {
-                Tone.start().then(() => {
-                    audioContextStarted = true;
-                    console.log("Contexte audio démarré par le clic RPM.");
-                    applyRpmMode(mode);
-                }).catch(e => console.error("Erreur de démarrage du contexte audio:", e));
-            } else {
-                applyRpmMode(mode);
-            }
-        };
-
-        const applyRpmMode = (mode) => {
             currentMode = mode;
             rpmChoices.forEach(c => c.classList.remove('active'));
             document.querySelector(`.rpm-choice[data-mode='${mode}']`).classList.add('active');
@@ -461,7 +446,7 @@
             }
             showOverlayBriefly();
             updatePlaybackRate();
-        }
+        };
 
         // --- PITCH ---
         pitchSlider.addEventListener('input', () => {
@@ -501,27 +486,22 @@
                     vinylImage.classList.remove('vinyl-scratch-mobile');
                     zoomButton.textContent = 'Zoom'; 
                 }
-                // Sur mobile, le CSS gère le scale. visualZoomFactor est à 1.0.
+                // Sur mobile, on ne déplace pas les contrôles pour le moment
                 rpmWrapper.classList.remove('rpm-scratch-centered');
-                pitchWrapper.classList.remove('pitch-scratch-centered'); 
-
             } else {
                 if (isScratchMode) {
                     vinylImage.classList.add('vinyl-scratch-desktop');
                     rpmWrapper.classList.add('rpm-scratch-centered');
                     pitchWrapper.classList.add('pitch-scratch-centered');
                     zoomButton.textContent = 'Vue Centrée';
-                    
-                    // NOUVEAU: Applique le scale factor uniquement au disque (géré dans animate())
-                    visualZoomFactor = DESKTOP_ZOOM_SCALE; 
+                    // Le transform: scale(1.7) est appliqué à la platine, centrée par Flexbox
+                    turntableContainer.style.transform = "scale(1.7)"; 
                 } else {
                     vinylImage.classList.remove('vinyl-scratch-desktop');
                     rpmWrapper.classList.remove('rpm-scratch-centered');
                     pitchWrapper.classList.remove('pitch-scratch-centered');
                     zoomButton.textContent = 'Zoom';
-                    
-                    // NOUVEAU: Réinitialise le scale factor
-                    visualZoomFactor = 1.0; 
+                    turntableContainer.style.transform = "scale(1)";
                 }
             }
         };
@@ -546,19 +526,10 @@
         
         const startScratch = (clientX, clientY) => {
             if (!player || currentMode === 'off' || !player.loaded) return;
-            // Toujours démarrer le contexte audio ici aussi, au cas où
             if (!audioContextStarted) {
-                Tone.start().then(() => {
-                    audioContextStarted = true;
-                    console.log("Contexte audio démarré par le scratch.");
-                    performStartScratch(clientX, clientY);
-                }).catch(e => console.error("Erreur de démarrage du contexte audio (scratch):", e));
-            } else {
-                performStartScratch(clientX, clientY);
+                Tone.start();
+                audioContextStarted = true;
             }
-        };
-        
-        const performStartScratch = (clientX, clientY) => {
             isScratching = true;
             vinylImage.style.cursor = 'grabbing';
             const center = getVinylCenter();
@@ -567,8 +538,7 @@
             currentRpmDisplay.textContent = 'SCRATCHING';
             showOverlayBriefly();
             updatePlaybackRate();
-        }
-
+        };
 
         const moveScratch = (clientX, clientY) => {
             if (!isScratching) return;
@@ -633,10 +603,8 @@
             } else if (currentRate !== 0) {
                 rotationDegrees += currentRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
             }
-            
-            // CHANGEMENT CLÉ: Applique le scale factor (visualZoomFactor) uniquement sur le disque
             // Le translate(-50%, -50%) est nécessaire pour conserver le centrage du disque pendant la rotation
-            vinylImage.style.transform = `translate(-50%, -50%) scale(${visualZoomFactor}) rotate(${rotationDegrees}deg)`;
+            vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
         }
 
         // --- INIT ---
