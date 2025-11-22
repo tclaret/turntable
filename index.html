@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Platine Vinyle Interactive Complète v7</title>
+<title>Scratching Vinyl</title>
 
 <!-- Tailwind CSS et Tone.js pour l'audio avancé -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -158,7 +158,14 @@
         background-color: rgba(60, 60, 80, 0.7); border-radius: 8px;
         display: flex; flex-direction: column; justify-content: center;
         align-items: center; font-size: 14px; z-index: 20; 
+        
+        /* Transition pour l'opacité et positionnement initial */
+        transition: opacity 0.5s ease-out;
     }
+
+    /* État caché initial */
+    .overlay-hidden { opacity: 0; pointer-events: none; }
+    
     #overlay-box #status-message { font-size: 10px; color: #999; }
 
     /* ---------------------------------------------------- */
@@ -212,7 +219,7 @@
 
 
             <!-- Le rectangle d'affichage (en haut à droite) -->
-            <div id="overlay-box">
+            <div id="overlay-box" class="overlay-hidden">
                 <p class="text-xs text-white">Vitesse Actuelle:</p>
                 <p id="current-rpm-display" class="text-xl font-bold">STOP</p>
                 <span id="status-message">Chargement Audio...</span>
@@ -281,6 +288,9 @@
         const VELOCITY_DECAY = 0.95; // Frottement (décélération)
         const VELOCITY_MULTIPLIER = 0.001; // Sensibilité du mouvement au taux de lecture audio
         
+        // Variable pour gérer l'affichage de l'overlay
+        let overlayTimeoutId = null; 
+        
         // --- ÉLÉMENTS DU DOM ---
         const turntableContainer = document.getElementById('turntable-container');
         const vinylImage = document.getElementById('vinyl-image');
@@ -293,17 +303,36 @@
         const directionButton = document.getElementById('direction-button');
         const zoomButton = document.getElementById('zoom-button');
         const rpmWrapper = document.getElementById('rpm-wrapper');
+        const overlayBox = document.getElementById('overlay-box');
 
+
+        // --- LOGIQUE D'AFFICHAGE/MASQUAGE DE L'OVERLAY ---
+
+        const showOverlayBriefly = () => {
+            // 1. Annuler tout masquage en cours
+            if (overlayTimeoutId) {
+                clearTimeout(overlayTimeoutId);
+            }
+            
+            // 2. Afficher l'overlay immédiatement
+            overlayBox.classList.remove('overlay-hidden');
+            
+            // 3. Définir un nouveau timeout pour masquer après 1.5 seconde
+            overlayTimeoutId = setTimeout(() => {
+                overlayBox.classList.add('overlay-hidden');
+            }, 1500); // 1500ms = 1.5 seconde
+        };
 
         // --- CONFIGURATION AUDIO TONE.JS ---
         let player = null;
-        let normalBuffer = null; // Nous n'utiliserons qu'un seul buffer
+        let normalBuffer = null; 
         let audioContextStarted = false;
         
         // Fonction pour charger l'audio
         async function loadAudio() {
             statusMessage.textContent = "Chargement de la piste...";
-            // L'URL spécifiée par l'utilisateur
+            showOverlayBriefly();
+
             const audioUrl = "https://tclaret.github.io/turntable/JB_Cold_Sweat.opus";
             
             try {
@@ -312,30 +341,34 @@
                     // Succès
                     () => {
                         statusMessage.textContent = "Piste chargée. Prêt à jouer !";
+                        showOverlayBriefly();
                         
                         // 2. Créer le lecteur Tone.js (une fois le buffer chargé)
                         try {
                             player = new Tone.Player(normalBuffer).toDestination();
                             player.loop = true;
                             player.playbackRate = 0; // Initialement à l'arrêt
-                            // Démarrer le lecteur pour qu'il soit prêt à jouer dès que rate > 0 ou < 0
                             player.start(0); 
                             
                             statusMessage.textContent = "Prêt. Cliquez sur 33 ou 45 !";
+                            showOverlayBriefly();
                         } catch (e) {
                             console.error("Erreur lors de la création du lecteur Tone.js:", e);
                             statusMessage.textContent = "Erreur (Lecteur Audio).";
+                            showOverlayBriefly();
                         }
                     },
                     // Erreur
                     (error) => {
                         console.error("Erreur de chargement audio (CORS/MIME type OPUS):", error);
-                        statusMessage.textContent = "Erreur de chargement. Le fichier OPUS n'a pas pu être lu.";
+                        statusMessage.textContent = "Erreur de chargement.";
+                        showOverlayBriefly();
                     }
                 );
             } catch (error) {
                 console.error("Erreur Tone.js:", error);
-                statusMessage.textContent = "Erreur critique. (Vérifiez la console)";
+                statusMessage.textContent = "Erreur critique.";
+                showOverlayBriefly();
             }
         }
 
@@ -348,12 +381,10 @@
             let finalRate = 0;
             
             if (isScratching) {
-                // En mode scratch, on utilise la vitesse instantanée du doigt (currentVelocity)
-                // On préserve le sens de lecture du disque pour les calculs de vitesse
+                // Vitesse audio basée sur le mouvement du doigt * facteur de direction
                 finalRate = currentVelocity * directionFactor; 
             } else {
                 // Vitesse du moteur: RPM * Pitch * Direction
-                // Si directionFactor est -1.0, finalRate devient négatif, jouant l'audio à l'envers
                 finalRate = targetBaseVelocity * pitchFactor * directionFactor;
             }
             
@@ -365,7 +396,8 @@
         // Fonction principale pour définir le mode RPM
         const setRpmMode = (mode) => {
             if (!player || !player.loaded) return;
-            if (currentMode === mode && mode !== 'off') return;
+            // Si le mode change réellement, ou si on passe de l'arrêt au même mode
+            if (currentMode === mode && mode !== 'off') return; 
 
             currentMode = mode;
             
@@ -386,6 +418,9 @@
                 currentRpmDisplay.textContent = mode + ' tours';
                 statusMessage.textContent = (directionFactor > 0) ? "En Lecture" : "Lecture Inversée";
             }
+            
+            // Afficher l'overlay
+            showOverlayBriefly();
 
             // Mettre à jour la vitesse de lecture (qui gère l'audio)
             updatePlaybackRate();
@@ -416,6 +451,9 @@
                 directionButton.classList.add('bg-red-700');
                 if (currentMode !== 'off') statusMessage.textContent = 'Lecture Inversée';
             }
+            
+            // Afficher l'overlay
+            showOverlayBriefly();
 
             // Mise à jour de la vitesse (la rate négative gère l'audio inversé)
             updatePlaybackRate();
@@ -430,11 +468,9 @@
             if (isMobile()) {
                 if (isScratchMode) {
                     vinylImage.classList.add('centered-mobile');
-                    // Mobile: Si la vue zoom est active, le bouton propose de revenir à la vue centrée
                     zoomButton.textContent = 'Vue Centrée'; 
                 } else {
                     vinylImage.classList.remove('centered-mobile');
-                    // Mobile: Si la vue est centrée, le bouton propose de zoomer
                     zoomButton.textContent = 'Zoom'; 
                 }
                 rpmWrapper.classList.remove('rpm-scratch-centered');
@@ -442,12 +478,10 @@
                 if (isScratchMode) {
                     vinylImage.classList.add('vinyl-scratch-desktop');
                     rpmWrapper.classList.add('rpm-scratch-centered');
-                    // Desktop: Si la vue zoom est active, le bouton propose de revenir à la vue Centrée
                     zoomButton.textContent = 'Vue Centrée';
                 } else {
                     vinylImage.classList.remove('vinyl-scratch-desktop');
                     rpmWrapper.classList.remove('rpm-scratch-centered');
-                    // Desktop: Si la vue est Centrée, le bouton propose de Zoomer
                     zoomButton.textContent = 'Zoom';
                 }
             }
@@ -467,17 +501,23 @@
             if (!player || currentMode === 'off' || !player.loaded) return;
             
             if (!audioContextStarted) {
-                // Démarre l'AudioContext sur interaction utilisateur
                 Tone.start();
                 audioContextStarted = true;
                 statusMessage.textContent = "Contexte audio démarré.";
+                showOverlayBriefly();
             }
 
             isScratching = true;
             lastX = clientX;
-            currentVelocity = 0; // Réinitialiser la vitesse audio
+            currentVelocity = 0; 
             vinylImage.style.cursor = 'grabbing';
-            updatePlaybackRate(); // Couper le moteur audio
+            
+            // Mettre à jour l'affichage de la vitesse instantanée
+            currentRpmDisplay.textContent = 'SCRATCH';
+            statusMessage.textContent = (directionFactor > 0) ? "Lecture Manuelle" : "Lecture Manuelle Inv.";
+            showOverlayBriefly();
+
+            updatePlaybackRate(); 
         };
 
         const moveScratch = (clientX) => {
@@ -486,10 +526,8 @@
             const deltaX = clientX - lastX;
             lastX = clientX;
 
-            // Calculer la nouvelle vitesse AUDIO
             currentVelocity = deltaX * VELOCITY_MULTIPLIER;
             
-            // Mettre à jour l'audio immédiatement
             updatePlaybackRate();
         };
 
@@ -497,10 +535,14 @@
             if (!isScratching) return;
             
             isScratching = false;
-            // Laisser la boucle animate décélérer la rotation
-            updatePlaybackRate(); // Réactiver la lecture moteur (la boucle anim gère la décélération visuelle)
+            updatePlaybackRate(); 
             
             vinylImage.style.cursor = 'grab';
+
+            // Afficher l'état du moteur RPM
+            currentRpmDisplay.textContent = currentMode === 'off' ? 'STOP' : currentMode + ' tours';
+            statusMessage.textContent = currentMode === 'off' ? "Arrêté, prêt à jouer." : (directionFactor > 0) ? "En Lecture" : "Lecture Inversée";
+            showOverlayBriefly();
         };
         
         // --- ÉVÉNEMENTS MOUSE ET TOUCH ---
@@ -530,13 +572,11 @@
             const currentAudioRate = player && player.loaded ? player.playbackRate : 0;
             
             if (isScratching) {
-                // Utiliser la vitesse instantanée pour la rotation
+                // Rotation visuelle basée sur la vitesse du doigt
                 visualSpeed = currentVelocity * 500; 
-                // La vitesse visuelle décélère pour simuler le frottement du doigt
                 currentVelocity *= VELOCITY_DECAY;
             } else if (currentMode !== 'off' || Math.abs(currentAudioRate) > 0.0001) {
-                // Rotation par le moteur (basée sur la vitesse audio actuelle)
-                // La rotation visuelle doit aussi suivre la direction
+                // Rotation par le moteur (la rate négative inverse la rotation)
                 visualSpeed = currentAudioRate * 5; 
             } else {
                 // Arrêt complet
