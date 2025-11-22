@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Scatching Vinyl ? Go on ... v14</title>
+<title>Platine Vinyle Interactive Complète v15</title>
 
 <!-- Tailwind CSS et Tone.js pour l'audio avancé -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -193,7 +193,7 @@
 
     /* Le rectangle d'affichage (en haut à droite) */
     #overlay-box {
-        position: absolute; top: 5%; right: 5%; width: 150px; height: 60px;
+        position: absolute; top: 5%; right: 5%; width: 150px; height: 50px;
         background-color: rgba(60, 60, 80, 0.7); border-radius: 8px;
         display: flex; flex-direction: column; justify-content: center;
         align-items: center; font-size: 14px; z-index: 20; 
@@ -205,14 +205,13 @@
     /* État caché initial */
     .overlay-hidden { opacity: 0; pointer-events: none; }
     
-    #overlay-box #status-message { font-size: 10px; color: #999; }
-
     /* ---------------------------------------------------- */
     /* Styles pour le mode Mobile / Vue Zoom */
     /* ---------------------------------------------------- */
     @media (max-width: 768px) {
         /* Vinyle décalé vers la droite, bord gauche libre pour le pouce (mode scratch par défaut) */
-        #vinyl-image { left: 62.5%; width: 100%; height: 100%; }
+        /* NOUVEAU : Zoom plus grand (140%) et plus décalé (70%) */
+        #vinyl-image { left: 70%; width: 140%; height: 140%; }
 
         /* Centrage du vinyle en mode Vue Centrée sur mobile */
         #vinyl-image.centered-mobile { left: 50%; width: 80%; height: 80%; }
@@ -226,7 +225,8 @@
     }
     
     /* Classe pour le déplacement du vinyle en mode scratch sur desktop */
-    .vinyl-scratch-desktop { left: 62.5% !important; width: 100% !important; height: 100% !important; }
+    /* NOUVEAU : Même augmentation pour Desktop */
+    .vinyl-scratch-desktop { left: 70% !important; width: 140% !important; height: 140% !important; }
     
 </style>
 </head>
@@ -258,10 +258,9 @@
 
 
             <!-- Le rectangle d'affichage (en haut à droite) -->
+            <!-- NOUVEAU : Contenu simplifié (plus de label "Vitesse Actuelle" ni statusMessage) -->
             <div id="overlay-box" class="overlay-hidden">
-                <p class="text-xs text-white">Vitesse Actuelle:</p>
-                <p id="current-rpm-display" class="text-xl font-bold">STOP</p>
-                <span id="status-message">Chargement Audio...</span>
+                <p id="current-rpm-display" class="text-2xl font-bold tracking-wider">STOP</p>
             </div>
 
             <!-- Contrôle RPM (Bas-Gauche) -->
@@ -326,7 +325,7 @@
         // --- ÉTATS GLOBAUX ---
         let currentMode = "off";
         let pitchFactor = 1.0;
-        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé (détermine le signe de la rate)
+        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé (détermine le signe de playbackRate)
         let targetBaseVelocity = 0; // Vitesse de lecture du moteur (RPM seulement)
         
         let isScratchMode = false; // False = Vue Centrée, True = Vue Zoom/Scratch
@@ -337,13 +336,8 @@
         let rotationDegrees = 0; // Rotation visuelle cumulée en degrés
         let currentScratchVelocity = 0; // Vitesse angulaire (rate) instantanée pendant le scratch
         
-        // CALIBRAGE DU SCRATCH
-        // Facteur pour convertir le delta d'angle en playbackRate.
-        // 33 RPM = 3.33 deg/frame. Rate = 1.0.
-        // Donc Multiplier = 1.0 / 3.333 = 0.3
-        const ANGULAR_MULTIPLIER = 0.3; 
-
-        const VISUAL_RPM_MULTIPLIER = 5; // Facteur visuel (approx 33t/min)
+        const ANGULAR_MULTIPLIER = 0.015; // Sensibilité angulaire pour le taux de lecture audio
+        const VISUAL_RPM_MULTIPLIER = 50; // Facteur de vitesse visuelle pour la rotation du moteur
         const REVERSE_SEEK_OFFSET = 0.05; 
         
         // Infos Audio
@@ -361,7 +355,7 @@
         const rpmChoices = document.querySelectorAll('.rpm-choice');
         const rpmImg = document.getElementById('rpm-img');
         const currentRpmDisplay = document.getElementById('current-rpm-display');
-        const statusMessage = document.getElementById('status-message');
+        // const statusMessage = document.getElementById('status-message'); // SUPPRIMÉ
         const pitchSlider = document.getElementById('pitch-slider');
         const pitchValueDisplay = document.getElementById('pitch-value');
         const directionButton = document.getElementById('direction-button');
@@ -391,11 +385,8 @@
             let finalRate = 0;
             
             if (isScratching) {
-                // En mode Scratch, on ignore la direction du moteur, c'est le geste qui compte
-                // currentScratchVelocity contient déjà le signe (positif ou négatif)
-                // On multiplie par directionFactor seulement si on veut que "l'avant" soit l'inverse en mode inversé
-                // Mais pour le scratch physique, avant = avant. Donc on n'applique pas directionFactor ici.
-                finalRate = currentScratchVelocity; 
+                // En mode Scratch: la vitesse est déterminée par le mouvement de la main
+                finalRate = currentScratchVelocity * directionFactor; 
             } else {
                 // Mode Moteur: RPM * Pitch * Direction
                 finalRate = targetBaseVelocity * pitchFactor * directionFactor;
@@ -407,8 +398,10 @@
 
         // Fonction pour charger l'audio
         async function loadAudio() {
-            statusMessage.textContent = "Chargement de la piste...";
-            showOverlayBriefly();
+            // NOUVEAU: Affichage simplifié pour le chargement
+            // On n'affiche rien dans l'overlay principal pour le chargement pour rester minimaliste
+            // ou on pourrait afficher "LOADING..." si souhaité. 
+            // Pour l'instant, on laisse vide ou STOP jusqu'à ce que ce soit prêt.
 
             const audioUrl = "https://tclaret.github.io/turntable/JB_Cold_Sweat.opus";
             
@@ -418,36 +411,25 @@
                     // Succès
                     () => {
                         bufferDuration = normalBuffer.duration;
-                        statusMessage.textContent = "Piste chargée. Prêt à jouer !";
-                        showOverlayBriefly();
                         
                         // 2. Créer le lecteur Tone.js (une fois le buffer chargé)
                         try {
                             player = new Tone.Player(normalBuffer).toDestination();
                             player.loop = true;
-                            // FIX: Set playbackRate directly instead of playbackRate.value
                             player.playbackRate = 0; 
                             player.start(0); 
                             
-                            statusMessage.textContent = "Prêt. Cliquez sur 33 ou 45 !";
-                            showOverlayBriefly();
                         } catch (e) {
                             console.error("Erreur lors de la création du lecteur Tone.js:", e);
-                            statusMessage.textContent = "Erreur (Lecteur Audio).";
-                            showOverlayBriefly();
                         }
                     },
                     // Erreur
                     (error) => {
                         console.error("Erreur de chargement audio (CORS/MIME type OPUS):", error);
-                        statusMessage.textContent = "Erreur de chargement.";
-                        showOverlayBriefly();
                     }
                 );
             } catch (error) {
                 console.error("Erreur Tone.js:", error);
-                statusMessage.textContent = "Erreur critique.";
-                showOverlayBriefly();
             }
         }
 
@@ -471,11 +453,10 @@
             if (mode === 'off') {
                 targetBaseVelocity = 0;
                 currentRpmDisplay.textContent = 'STOP';
-                statusMessage.textContent = "Arrêté, prêt à jouer.";
             } else {
                 targetBaseVelocity = RPM_RATES[mode];
-                currentRpmDisplay.textContent = mode + ' tours';
-                statusMessage.textContent = (directionFactor > 0) ? "En Lecture" : "Lecture Inversée";
+                // NOUVEAU: Affichage simplifié 33 RPM / 45 RPM
+                currentRpmDisplay.textContent = mode + ' RPM';
             }
             
             showOverlayBriefly();
@@ -500,14 +481,13 @@
                 directionButton.textContent = 'Sens: Normal';
                 directionButton.classList.remove('bg-red-700');
                 directionButton.classList.add('bg-gray-600');
-                if (currentMode !== 'off') statusMessage.textContent = 'En Lecture';
             } else {
                 directionButton.textContent = 'Sens: Inversé';
                 directionButton.classList.remove('bg-gray-600');
                 directionButton.classList.add('bg-red-700');
-                if (currentMode !== 'off') statusMessage.textContent = 'Lecture Inversée';
             }
             
+            // On n'affiche pas de message spécial pour la direction, juste le RPM actuel
             showOverlayBriefly();
             updatePlaybackRate();
         });
@@ -532,10 +512,13 @@
                     vinylImage.classList.add('vinyl-scratch-desktop');
                     rpmWrapper.classList.add('rpm-scratch-centered');
                     zoomButton.textContent = 'Vue Centrée';
+                    // NOUVEAU: Zoom plus puissant sur Desktop (1.7x)
+                    turntableContainer.style.transform = "scale(1.7)";
                 } else {
                     vinylImage.classList.remove('vinyl-scratch-desktop');
                     rpmWrapper.classList.remove('rpm-scratch-centered');
                     zoomButton.textContent = 'Zoom';
+                    turntableContainer.style.transform = "scale(1)";
                 }
             }
         };
@@ -563,7 +546,6 @@
         const getAngle = (x, y, centerX, centerY) => {
             const dx = x - centerX;
             const dy = y - centerY;
-            // atan2 retourne l'angle en radians (-PI à PI), conversion en degrés
             return Math.atan2(dy, dx) * (180 / Math.PI);
         };
         
@@ -573,8 +555,6 @@
             if (!audioContextStarted) {
                 Tone.start();
                 audioContextStarted = true;
-                statusMessage.textContent = "Contexte audio démarré.";
-                showOverlayBriefly();
             }
 
             isScratching = true;
@@ -584,8 +564,8 @@
             const center = getVinylCenter();
             lastAngle = getAngle(clientX, clientY, center.x, center.y);
             
-            currentRpmDisplay.textContent = 'SCRATCH';
-            statusMessage.textContent = (directionFactor > 0) ? "Lecture Manuelle" : "Lecture Manuelle Inv.";
+            // NOUVEAU: Affichage simplifié
+            currentRpmDisplay.textContent = 'SCRATCHING...';
             showOverlayBriefly();
             
             updatePlaybackRate();
@@ -606,15 +586,8 @@
                 deltaAngle += 360;
             }
 
-            // MISE À JOUR DE LA VITESSE AUDIO
-            // Le deltaAngle est en degrés par frame (ou par événement mousemove)
-            // On applique le multiplicateur pour obtenir un playbackRate cohérent
             currentScratchVelocity = deltaAngle * ANGULAR_MULTIPLIER;
-            
-            // MISE À JOUR VISUELLE
             rotationDegrees += deltaAngle;
-            
-            // Stocker l'angle actuel pour la prochaine itération
             lastAngle = currentAngle;
             
             updatePlaybackRate();
@@ -628,24 +601,20 @@
             
             vinylImage.style.cursor = 'grab';
 
-            // Revenir à la vitesse du moteur
             updatePlaybackRate(); 
 
-            // Afficher l'état du moteur RPM
-            currentRpmDisplay.textContent = currentMode === 'off' ? 'STOP' : currentMode + ' tours';
-            statusMessage.textContent = currentMode === 'off' ? "Arrêté, prêt à jouer." : (directionFactor > 0) ? "En Lecture" : "Lecture Inversée";
+            // NOUVEAU: Retour à l'affichage standard
+            currentRpmDisplay.textContent = currentMode === 'off' ? 'STOP' : currentMode + ' RPM';
             showOverlayBriefly();
         };
         
         // --- ÉVÉNEMENTS MOUSE ET TOUCH ---
         
-        // Événements souris
         vinylImage.addEventListener('mousedown', (e) => startScratch(e.clientX, e.clientY));
         turntableContainer.addEventListener('mousemove', (e) => moveScratch(e.clientX, e.clientY));
         turntableContainer.addEventListener('mouseup', endScratch);
         turntableContainer.addEventListener('mouseleave', endScratch);
         
-        // Événements tactiles
         vinylImage.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) { 
                 startScratch(e.touches[0].clientX, e.touches[0].clientY); 
@@ -678,23 +647,19 @@
             
             const currentRate = player.playbackRate; 
 
-            // --- CORRECTION DU LOOP INVERSÉ ---
-            // Si le taux est négatif
             if (currentRate < 0) {
                 const currentTime = player.now(); 
-                // Si on est au début, on saute à la fin
                 if (currentTime <= REVERSE_SEEK_OFFSET) { 
                     player.seek(bufferDuration - REVERSE_SEEK_OFFSET); 
                 }
             }
             
-            // --- MISE À JOUR VISUELLE ---
             if (isScratching) {
-                // La rotationDegrees est déjà mise à jour dans moveScratch (pour suivre le doigt)
-                // Pas besoin d'ajouter quoi que ce soit ici
+                if (Math.abs(currentScratchVelocity) > 0.0001) {
+                    currentScratchVelocity *= 0.95; 
+                }
             } else if (currentRate !== 0) {
-                // Mode Moteur: Rotation visuelle basée sur le taux de lecture
-                rotationDegrees += currentRate * VISUAL_RPM_MULTIPLIER * dt * 60; // Ajustement pour frame rate
+                rotationDegrees += currentRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
             }
             
             vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
@@ -724,7 +689,6 @@
             loadAudio();
             animate();
             
-            // Initialiser l'état visuel du mode scratch/zoom (Zoom Mode par défaut sur Desktop)
             isScratchMode = isMobile() ? false : true; 
             updateScratchModeUI();
         }
