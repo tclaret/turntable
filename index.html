@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Platine Vinyle Interactive Complète v19</title>
+<title>Scratching Vinyl v20</title>
 
 <!-- Tailwind CSS et Tone.js -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -82,7 +82,7 @@
         display: flex;
         flex-wrap: wrap; 
         align-items: center;
-        gap: 8px;
+        gap: 12px; /* Espacement légèrement augmenté pour la rotation */
         z-index: 60; 
         background: rgba(0, 0, 0, 0.6);
         padding: 8px;
@@ -103,7 +103,7 @@
         letter-spacing: 0.5px;
         cursor: pointer;
         box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        transition: transform 0.1s;
+        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Transition fluide pour la rotation */
         white-space: nowrap;
         min-width: 40px; 
         text-align: center;
@@ -120,16 +120,25 @@
         color: #000;
     }
     
-    /* Style spécifique pour le bouton reverse actif (rouge + police spéciale) */
+    /* --- NOUVEAU STYLE REVERSE --- */
     .vintage-btn.reverse-active {
         background: linear-gradient(to bottom, #ff9999 0%, #cc0000 100%);
         color: white;
         text-shadow: 0 1px 3px rgba(0,0,0,1);
-        /* POLICE SPÉCIALE */
         font-family: 'Creepster', cursive;
         font-size: 14px; 
         letter-spacing: 1px;
         border-color: #600;
+        
+        /* ROTATION ANTI-HORAIRE */
+        transform: rotate(-15deg); 
+        margin: 0 5px; /* Marges pour éviter le chevauchement */
+        box-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+    }
+
+    /* Maintenir la rotation au clic */
+    .vintage-btn.reverse-active:active {
+        transform: rotate(-15deg) scale(0.95);
     }
 
 
@@ -385,12 +394,9 @@
                 finalRate = targetBaseVelocity * pitchFactor * directionFactor;
             }
             
-            // CORRECTION : Séparer la vitesse (valeur absolue) de la direction (reverse bool)
             const speed = Math.abs(finalRate);
             const isReverse = finalRate < 0;
-
-            // Limitation de sécurité
-            const safeSpeed = Math.min(speed, 10); // Max 10x speed
+            const safeSpeed = Math.min(speed, 10); 
             
             player.playbackRate = safeSpeed;
             player.reverse = isReverse;
@@ -578,17 +584,19 @@
             const dt = (now - lastTime) / 1000; 
             lastTime = now;
             
-            // On récupère les valeurs appliquées via updatePlaybackRate
             const currentRate = player.playbackRate; 
-            const isReverse = player.reverse;
-
-            // Pour la visualisation, on combine vitesse et direction
-            const effectiveVisualRate = currentRate * (isReverse ? -1 : 1);
-
+            if (currentRate < 0) { // Loop inversé
+                if (player.now() <= REVERSE_SEEK_OFFSET) { 
+                    player.seek(bufferDuration - REVERSE_SEEK_OFFSET); 
+                }
+            }
+            
             if (isScratching) {
                 if (Math.abs(currentScratchVelocity) > 0.0001) currentScratchVelocity *= 0.95; 
-            } else if (effectiveVisualRate !== 0) {
-                rotationDegrees += effectiveVisualRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
+            } else if (player.reverse) {
+                rotationDegrees -= currentRate * VISUAL_RPM_MULTIPLIER * dt * 60;
+            } else if (currentRate !== 0) {
+                rotationDegrees += currentRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
             }
             vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
         }
