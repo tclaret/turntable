@@ -4,12 +4,11 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Platine Vinyle Interactive Complète v17</title>
+<title>Platine Vinyle Interactive Complète v19</title>
 
 <!-- Tailwind CSS et Tone.js -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-<!-- Ajout de la police 'Creepster' pour le mode Reverse -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Creepster&display=swap" rel="stylesheet">
 
 <style>
@@ -106,7 +105,7 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         transition: transform 0.1s;
         white-space: nowrap;
-        min-width: 40px; /* Largeur min pour éviter le saut de taille */
+        min-width: 40px; 
         text-align: center;
     }
 
@@ -128,7 +127,7 @@
         text-shadow: 0 1px 3px rgba(0,0,0,1);
         /* POLICE SPÉCIALE */
         font-family: 'Creepster', cursive;
-        font-size: 14px; /* Légèrement plus grand pour la lisibilité */
+        font-size: 14px; 
         letter-spacing: 1px;
         border-color: #600;
     }
@@ -250,25 +249,13 @@
         #rpm-wrapper { bottom: 20px; left: 10px; padding: 8px; transform: scale(0.9); transform-origin: bottom left; }
         #pitch-wrapper { bottom: 20px; right: 10px; padding: 8px; transform: scale(0.9); transform-origin: bottom right; width: 140px; }
 
-        /* Optimisation du panneau de contrôle mobile */
         .control-panel {
-            top: 10px;
-            left: 10px;
-            max-width: 65%; /* Laisser la place à l'overlay à droite */
-            gap: 5px;
-            padding: 5px 8px;
+            top: 10px; left: 10px; max-width: 65%; 
+            gap: 5px; padding: 5px 8px;
         }
-        .vintage-btn {
-            padding: 5px 8px;
-            font-size: 10px;
-        }
+        .vintage-btn { padding: 5px 8px; font-size: 10px; }
         
-        /* Overlay plus petit sur mobile */
-        #overlay-box {
-            top: 10px;
-            right: 10px;
-            padding: 5px 8px;
-        }
+        #overlay-box { top: 10px; right: 10px; padding: 5px 8px; }
         #current-rpm-display { font-size: 12px; }
     }
     
@@ -290,7 +277,7 @@
             <div class="control-panel">
                 <button id="stop-button" class="vintage-btn">Arrêt</button>
                 <button id="direction-button" class="vintage-btn">!</button> <!-- ! = Normal -->
-                <button id="zoom-button" class="vintage-btn">Zoom</button>
+                <button id="zoom-button" class="vintage-btn">Vue Scratch</button>
             </div>
 
             <!-- Overlay (Haut-Droit) -->
@@ -352,8 +339,8 @@
         let rotationDegrees = 0; 
         let currentScratchVelocity = 0; 
         
-        const ANGULAR_MULTIPLIER = 0.015; 
-        const VISUAL_RPM_MULTIPLIER = 50; 
+        const ANGULAR_MULTIPLIER = 0.3; 
+        const VISUAL_RPM_MULTIPLIER = 3.3333; 
         const REVERSE_SEEK_OFFSET = 0.05; 
         
         // Audio
@@ -397,7 +384,16 @@
             } else {
                 finalRate = targetBaseVelocity * pitchFactor * directionFactor;
             }
-            player.playbackRate = finalRate;
+            
+            // CORRECTION : Séparer la vitesse (valeur absolue) de la direction (reverse bool)
+            const speed = Math.abs(finalRate);
+            const isReverse = finalRate < 0;
+
+            // Limitation de sécurité
+            const safeSpeed = Math.min(speed, 10); // Max 10x speed
+            
+            player.playbackRate = safeSpeed;
+            player.reverse = isReverse;
         };
 
         async function loadAudio() {
@@ -453,7 +449,7 @@
             if (!isScratching) updatePlaybackRate();
         });
 
-        // --- DIRECTION (Updated Button Text with Custom Font) ---
+        // --- DIRECTION ---
         directionButton.addEventListener('click', () => {
             directionFactor *= -1; 
             if (directionFactor === 1.0) {
@@ -582,17 +578,17 @@
             const dt = (now - lastTime) / 1000; 
             lastTime = now;
             
+            // On récupère les valeurs appliquées via updatePlaybackRate
             const currentRate = player.playbackRate; 
-            if (currentRate < 0) { // Loop inversé
-                if (player.now() <= REVERSE_SEEK_OFFSET) { 
-                    player.seek(bufferDuration - REVERSE_SEEK_OFFSET); 
-                }
-            }
-            
+            const isReverse = player.reverse;
+
+            // Pour la visualisation, on combine vitesse et direction
+            const effectiveVisualRate = currentRate * (isReverse ? -1 : 1);
+
             if (isScratching) {
                 if (Math.abs(currentScratchVelocity) > 0.0001) currentScratchVelocity *= 0.95; 
-            } else if (currentRate !== 0) {
-                rotationDegrees += currentRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
+            } else if (effectiveVisualRate !== 0) {
+                rotationDegrees += effectiveVisualRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
             }
             vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
         }
