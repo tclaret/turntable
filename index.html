@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Platine Vinyle Interactive Complète v10</title>
+<title>Scratching Vinyl </title>
 
 <!-- Tailwind CSS et Tone.js pour l'audio avancé -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
     /* Configuration du fond et de la police */
     body {
         font-family: 'Inter', sans-serif;
-        background-color: #1a1a2e; /* Couleur de fond sombre pour l'ambiance */
+        background-color: #1a1a2e; /* Couleur de fond sombre  */
         color: #ffffff;
         height: 100vh;
         display: flex;
@@ -54,7 +54,7 @@
         height: 80%;
         border-radius: 50%;
         
-        /* Utilisation de l'image de vinyle fournie par l'utilisateur */
+        /* Utilisation de l'image de vinyl */
         background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
         background-size: cover;
         background-position: center;
@@ -326,18 +326,23 @@
         // --- ÉTATS GLOBAUX ---
         let currentMode = "off";
         let pitchFactor = 1.0;
-        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé (détermine le signe de playbackRate)
+        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé (détermine le signe de la rate)
         let targetBaseVelocity = 0; // Vitesse de lecture du moteur (RPM seulement)
         
         let isScratchMode = false; // False = Vue Centrée, True = Vue Zoom/Scratch
+        
+        // --- NOUVELLES VARIABLES POUR LE CONTRÔLE AUDIO MANUEL ---
+        let lastTime = performance.now(); // Temps de la dernière frame pour calculer le delta temps (dt)
+        let audioTime = 0; // Position de lecture dans le buffer (en secondes)
+        let bufferDuration = 0; // Durée totale du morceau
+        let currentVelocity = 0; // Vitesse angulaire (rate) instantanée pendant le scratch
+        const ANGULAR_MULTIPLIER = 0.015; // Sensibilité angulaire pour le taux de lecture audio (ajusté pour un meilleur scratch)
+        const VISUAL_RPM_MULTIPLIER = 50; // Facteur de vitesse visuelle pour la rotation du moteur
         
         // Variables pour le Scratch ANGLULAIRE
         let isScratching = false;
         let lastAngle = 0; // Angle précédent de la touche
         let rotationDegrees = 0; // Rotation visuelle cumulée en degrés
-        let currentVelocity = 0; // Vitesse instantanée (basée sur l'angle)
-        const ANGULAR_MULTIPLIER = 0.005; // Sensibilité angulaire pour le taux de lecture audio
-        const VELOCITY_DECAY = 0.95; // Frottement (non utilisé ici, mais maintenu comme référence)
         
         // Variable pour gérer l'affichage de l'overlay
         let overlayTimeoutId = null; 
@@ -391,6 +396,7 @@
                 normalBuffer = await new Tone.Buffer(audioUrl, 
                     // Succès
                     () => {
+                        bufferDuration = normalBuffer.duration; // IMPORTANT: Stocker la durée
                         statusMessage.textContent = "Piste chargée. Prêt à jouer !";
                         showOverlayBriefly();
                         
@@ -398,7 +404,8 @@
                         try {
                             player = new Tone.Player(normalBuffer).toDestination();
                             player.loop = true;
-                            player.playbackRate = 0; // Initialement à l'arrêt
+                            // Taux de lecture fixe à 1.0, car nous gérons le temps manuellement
+                            player.playbackRate = 1.0; 
                             player.start(0); 
                             
                             statusMessage.textContent = "Prêt. Cliquez sur 33 ou 45 !";
@@ -423,31 +430,11 @@
             }
         }
 
-        // --- GESTION DU MODE RPM & VITESSE ---
-
-        // Met à jour la vitesse de lecture audio en fonction du RPM, du Pitch et de la Direction
-        const updatePlaybackRate = () => {
-            if (!player || !player.loaded) return;
-
-            let finalRate = 0;
-            
-            if (isScratching) {
-                // Vitesse audio basée sur le mouvement angulaire du doigt * facteur de direction
-                finalRate = currentVelocity * directionFactor; 
-            } else {
-                // Vitesse du moteur: RPM * Pitch * Direction
-                finalRate = targetBaseVelocity * pitchFactor * directionFactor;
-            }
-            
-            // Appliquer la vitesse au lecteur Tone.js
-            player.playbackRate = finalRate;
-        };
-
+        // --- GESTION DU MODE RPM & PITCH ---
 
         // Fonction principale pour définir le mode RPM
         const setRpmMode = (mode) => {
             if (!player || !player.loaded) return;
-            // Si le mode change réellement, ou si on passe de l'arrêt au même mode
             if (currentMode === mode && mode !== 'off') return; 
 
             currentMode = mode;
@@ -459,7 +446,7 @@
             // 2. Mise à jour de la rotation du bouton (Chicken Head)
             rpmImg.style.transform = `rotate(${RPM_ROTATION[mode]}deg)`;
             
-            // 3. Mise à jour de l'état du vinyle, de l'audio et de l'affichage
+            // 3. Mise à jour de l'état du moteur
             if (mode === 'off') {
                 targetBaseVelocity = 0;
                 currentRpmDisplay.textContent = 'STOP';
@@ -470,23 +457,17 @@
                 statusMessage.textContent = (directionFactor > 0) ? "En Lecture" : "Lecture Inversée";
             }
             
-            // Afficher l'overlay
             showOverlayBriefly();
-
-            // Mettre à jour la vitesse de lecture (qui gère l'audio)
-            updatePlaybackRate();
+            // NOTE: L'audio est mis à jour dans la boucle animate(), pas ici.
         };
 
-        // --- GESTION DU PITCH ---
-        
+        // GESTION DU PITCH (Met à jour le facteur, l'audio est géré dans animate)
         pitchSlider.addEventListener('input', () => {
             pitchFactor = 1.0 + parseFloat(pitchSlider.value);
             pitchValueDisplay.textContent = (parseFloat(pitchSlider.value) * 100).toFixed(2) + ' %';
-            updatePlaybackRate();
         });
 
-        // --- GESTION DE LA DIRECTION (NORMAL/INVERSÉ) ---
-
+        // GESTION DE LA DIRECTION (NORMAL/INVERSÉ)
         directionButton.addEventListener('click', () => {
             directionFactor *= -1; // Basculer entre 1.0 et -1.0
             
@@ -503,11 +484,7 @@
                 if (currentMode !== 'off') statusMessage.textContent = 'Lecture Inversée';
             }
             
-            // Afficher l'overlay
             showOverlayBriefly();
-
-            // Mise à jour de la vitesse (la rate négative gère l'audio inversé)
-            updatePlaybackRate();
         });
 
 
@@ -569,7 +546,8 @@
             if (!player || currentMode === 'off' || !player.loaded) return;
             
             if (!audioContextStarted) {
-                Tone.start();
+                // S'assurer que le contexte audio est démarré au premier clic
+                Tone.start(); 
                 audioContextStarted = true;
                 statusMessage.textContent = "Contexte audio démarré.";
                 showOverlayBriefly();
@@ -578,17 +556,13 @@
             isScratching = true;
             vinylImage.style.cursor = 'grabbing';
             
-            // NEW: Calculer et stocker l'angle initial
+            // Calculer et stocker l'angle initial
             const center = getVinylCenter();
             lastAngle = getAngle(clientX, clientY, center.x, center.y);
             
-            // Mettre à jour l'affichage de la vitesse instantanée
             currentRpmDisplay.textContent = 'SCRATCH';
             statusMessage.textContent = (directionFactor > 0) ? "Lecture Manuelle" : "Lecture Manuelle Inv.";
             showOverlayBriefly();
-
-            // Mettre à jour la rate (qui est 0 au début, mais prépare le player)
-            updatePlaybackRate(); 
         };
 
         const moveScratch = (clientX, clientY) => {
@@ -606,7 +580,7 @@
                 deltaAngle += 360;
             }
 
-            // Mise à jour de la vitesse audio basée sur la variation angulaire
+            // Mise à jour de la vitesse audio (currentVelocity) basée sur la variation angulaire
             currentVelocity = deltaAngle * ANGULAR_MULTIPLIER;
             
             // Mise à jour de la rotation visuelle instantanée
@@ -614,15 +588,13 @@
             
             // Stocker l'angle actuel pour la prochaine itération
             lastAngle = currentAngle;
-            
-            updatePlaybackRate();
         };
 
         const endScratch = () => {
             if (!isScratching) return;
             
             isScratching = false;
-            updatePlaybackRate(); // Revenir à la vitesse du moteur (targetBaseVelocity)
+            currentVelocity = 0; // Remet la vitesse manuelle à zéro pour le decay visuel
             
             vinylImage.style.cursor = 'grab';
 
@@ -634,13 +606,13 @@
         
         // --- ÉVÉNEMENTS MOUSE ET TOUCH ---
         
-        // Événements souris (utilisation de clientX et clientY)
+        // Événements souris
         vinylImage.addEventListener('mousedown', (e) => startScratch(e.clientX, e.clientY));
         turntableContainer.addEventListener('mousemove', (e) => moveScratch(e.clientX, e.clientY));
         turntableContainer.addEventListener('mouseup', endScratch);
         turntableContainer.addEventListener('mouseleave', endScratch);
         
-        // Événements tactiles (utilisation de clientX et clientY des touches)
+        // Événements tactiles
         vinylImage.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) { 
                 startScratch(e.touches[0].clientX, e.touches[0].clientY); 
@@ -652,26 +624,66 @@
             if (e.touches.length === 1) { 
                 moveScratch(e.touches[0].clientX, e.touches[0].clientY); 
             }
-        }, { passive: false }); // Ajout de passive: false pour que preventDefault fonctionne
+        }, { passive: false }); 
         turntableContainer.addEventListener('touchend', endScratch);
         turntableContainer.addEventListener('touchcancel', endScratch);
 
 
-        // --- BOUCLE D'ANIMATION VISUELLE (VSYNC) ---
+        // --- BOUCLE D'ANIMATION VISUELLE ET AUDIO (VSYNC) ---
         
         function animate() {
             requestAnimationFrame(animate);
 
-            // 1. Calculer la vitesse visuelle uniquement si le moteur est actif et qu'on ne scratch pas
-            if (!isScratching) {
-                const currentAudioRate = player && player.loaded ? player.playbackRate : 0;
-                // Vitesse visuelle proportionnelle au taux de lecture audio
-                const visualSpeed = currentAudioRate * 5; 
-                rotationDegrees += visualSpeed;
+            if (!player || !player.loaded || bufferDuration === 0) {
+                // Application de la rotation visuelle même si l'audio n'est pas prêt
+                vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
+                return;
             }
-            // Si on scratch, rotationDegrees est mis à jour directement dans moveScratch
             
-            // 2. Appliquer la rotation
+            const now = performance.now(); 
+            // Delta time en secondes
+            const dt = (now - lastTime) / 1000; 
+            lastTime = now;
+
+            // 1. Déterminer le taux de lecture effectif pour le buffer audio
+            let effectiveRate = 0;
+            if (isScratching) {
+                // Vitesse manuelle (basée sur le mouvement de la main/doigt)
+                effectiveRate = currentVelocity * directionFactor;
+                // Ajout d'une légère inertie pour ralentir la rotation visuelle à l'arrêt du doigt
+                currentVelocity *= 0.95; 
+            } else {
+                // Vitesse du moteur (RPM * Pitch)
+                effectiveRate = targetBaseVelocity * pitchFactor * directionFactor;
+                currentVelocity = 0; // S'assurer que la vitesse manuelle est à zéro
+            }
+            
+            // 2. Mettre à jour la position audio (audioTime)
+            audioTime += effectiveRate * dt;
+
+            // 3. Implémenter la Boucle (Wrapping)
+            
+            // Si le temps dépasse la durée, revenir au début (lecture normale)
+            while (audioTime >= bufferDuration) {
+                audioTime -= bufferDuration;
+            }
+            // Si le temps devient négatif, revenir à la fin (lecture inversée)
+            while (audioTime < 0) {
+                audioTime += bufferDuration;
+            }
+
+            // 4. Positionner le lecteur audio (Seek)
+            if (Math.abs(effectiveRate) > 0.0001) {
+                player.seek(audioTime); 
+            }
+            
+            // 5. Mettre à jour la rotation visuelle (pour le mode moteur uniquement)
+            if (!isScratching) {
+                // Utiliser le taux effectif pour la rotation visuelle
+                rotationDegrees += effectiveRate * VISUAL_RPM_MULTIPLIER * dt;
+            }
+            
+            // Appliquer la rotation visuelle
             vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
         }
 
