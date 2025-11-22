@@ -4,61 +4,56 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Platine Vinyle Interactive Complète v15</title>
+<title>Platine Vinyle Interactive Complète v17</title>
 
-<!-- Tailwind CSS et Tone.js pour l'audio avancé -->
+<!-- Tailwind CSS et Tone.js -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+<!-- Ajout de la police 'Creepster' pour le mode Reverse -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Creepster&display=swap" rel="stylesheet">
 
 <style>
     /* Configuration du fond et de la police */
     body {
         font-family: 'Inter', sans-serif;
-        background-color: #1a1a2e; /* Couleur de fond sombre pour l'ambiance */
+        background-color: #1a1a2e; 
         color: #ffffff;
         height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
         overflow: hidden; 
+        padding: 0; 
     }
     
-    /* Le conteneur principal de la platine */
     #turntable-container {
         position: relative;
         width: 90vmin;
         height: 90vmin;
         max-width: 900px;
         max-height: 900px;
-        background: #333; /* Couleur de base pour le plateau */
+        background: #333; 
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         overflow: hidden;
-        /* Centre la platine dans le viewport */
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
     }
 
-    /* Styles pour le VINYLE (au centre de la platine) */
+    /* Styles pour le VINYLE */
     #vinyl-image {
-        /* Position absolue au centre du #turntable-container */
         position: absolute;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%); /* Clé du centrage parfait */
-        
+        transform: translate(-50%, -50%); 
         width: 80%;
         height: 80%;
         border-radius: 50%;
-        
-        /* Utilisation de l'image de vinyle fournie par l'utilisateur */
         background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
         background-size: cover;
         background-position: center;
-        
         border: 1px solid #111;
         box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 10px rgba(0, 0, 0, 0.9);
         z-index: 10;
@@ -67,7 +62,6 @@
         transition: none;
     }
     
-    /* Le SVG à l'intérieur du vinyle pour l'étiquette centrale (invisible car l'image est utilisée) */
     #vinyl-image svg {
         position: absolute;
         top: 50%;
@@ -79,22 +73,111 @@
         pointer-events: none;
     }
 
+    /* ---------------------------------------------------- */
+    /* CONTROLES UNIFIÉS (Haut-Gauche) */
+    /* ---------------------------------------------------- */
+    .control-panel {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        display: flex;
+        flex-wrap: wrap; 
+        align-items: center;
+        gap: 8px;
+        z-index: 60; 
+        background: rgba(0, 0, 0, 0.6);
+        padding: 8px;
+        border-radius: 8px;
+        max-width: 60%; 
+    }
+    
+    /* Boutons Compacts */
+    .vintage-btn {
+        padding: 6px 10px; 
+        border: 1px solid #555;
+        border-radius: 4px;
+        background: linear-gradient(to bottom, #e0e0e0 0%, #b0b0b0 100%);
+        color: #333;
+        font-size: 11px; 
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        transition: transform 0.1s;
+        white-space: nowrap;
+        min-width: 40px; /* Largeur min pour éviter le saut de taille */
+        text-align: center;
+    }
+
+    .vintage-btn:active {
+        transform: translateY(1px);
+        background: linear-gradient(to bottom, #b0b0b0 0%, #999 100%);
+    }
+    
+    .vintage-btn.active-state {
+        background: linear-gradient(to bottom, #aaddff 0%, #6699cc 100%);
+        box-shadow: inset 0 0 5px #3498db;
+        color: #000;
+    }
+    
+    /* Style spécifique pour le bouton reverse actif (rouge + police spéciale) */
+    .vintage-btn.reverse-active {
+        background: linear-gradient(to bottom, #ff9999 0%, #cc0000 100%);
+        color: white;
+        text-shadow: 0 1px 3px rgba(0,0,0,1);
+        /* POLICE SPÉCIALE */
+        font-family: 'Creepster', cursive;
+        font-size: 14px; /* Légèrement plus grand pour la lisibilité */
+        letter-spacing: 1px;
+        border-color: #600;
+    }
+
 
     /* ---------------------------------------------------- */
-    /* STYLES RPM */
+    /* OVERLAY (Haut-Droit) - Dégagé */
+    /* ---------------------------------------------------- */
+    #overlay-box {
+        position: absolute; 
+        top: 15px; 
+        right: 15px; 
+        width: auto; 
+        min-width: 80px;
+        padding: 8px 12px;
+        background-color: rgba(60, 60, 80, 0.85); 
+        border-radius: 6px;
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center;
+        align-items: center; 
+        z-index: 55; 
+        transition: opacity 0.5s ease-out;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .overlay-hidden { opacity: 0; pointer-events: none; }
+    
+    #current-rpm-display {
+        font-size: 16px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: #fff;
+        text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    /* ---------------------------------------------------- */
+    /* STYLES RPM (Bas-Gauche) */
     /* ---------------------------------------------------- */
     #rpm-wrapper {
         position: absolute; bottom: 5%; left: 5%; width: auto;
         display: flex; flex-direction: column; align-items: center;     
-        gap: 8px; z-index: 50; background: rgba(0,0,0,0.2); 
+        gap: 8px; z-index: 50; background: rgba(0,0,0,0.3); 
         padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
         transition: left 0.5s ease-in-out, padding 0.3s ease;
     }
     
-    /* Classe pour centrer le RPM en mode Zoom sur desktop */
     .rpm-scratch-centered { left: 15% !important; }
 
-    /* Étiquettes du haut (45 - OFF - 33) */
     .rpm-labels {
         display:flex; justify-content:space-between; width: 90px; font-size: 10px;
         font-family: sans-serif; font-weight: bold; color: #d0d0d0;
@@ -102,7 +185,6 @@
     }
     .rpm-labels span { width: 25px; text-align: center; }
 
-    /* Contrôles de points au milieu */
     #rpm-controls { display:flex; justify-content:space-between; width: 90px; position: relative; }
 
     .rpm-choice {
@@ -117,7 +199,6 @@
         border-color: #003300;
     }
 
-    /* Image du bouton en bas */
     #rpm-img {
         width: 30px; height: auto; display: block;
         transform-origin: center center;
@@ -126,12 +207,12 @@
     }
 
     /* ---------------------------------------------------- */
-    /* PITCH CONTROL (Bas-Droite) - Élargi */
+    /* PITCH CONTROL (Bas-Droite) */
     /* ---------------------------------------------------- */
     #pitch-wrapper {
         position: absolute; bottom: 5%; right: 5%; 
-        width: 180px; /* Élargissement du wrapper */
-        background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;
+        width: 180px;
+        background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
         border: 1px solid rgba(255,255,255,0.1); z-index: 50;
     }
     #pitch-slider {
@@ -139,40 +220,19 @@
         border-radius: 3px; outline: none; cursor: pointer;
     }
     #pitch-slider::-webkit-slider-thumb {
-        -webkit-appearance: none; appearance: none; width: 16px; height: 28px; /* Plus haut pour simuler le levier */
+        -webkit-appearance: none; appearance: none; width: 16px; height: 28px; 
         border-radius: 3px; background: #00bcd4; cursor: pointer;
         box-shadow: 0 0 5px rgba(0, 188, 212, 0.8), inset 0 1px 3px rgba(255,255,255,0.4);
     }
 
-    /* Nouvelle échelle visuelle */
-    #pitch-scale {
-        position: relative;
-        height: 15px;
-        margin-top: 5px;
-    }
+    #pitch-scale { position: relative; height: 15px; margin-top: 5px; }
     .pitch-mark {
-        position: absolute;
-        top: 0;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        color: #aaa;
-        font-size: 9px;
-        font-weight: bold;
+        position: absolute; top: 0; height: 100%; display: flex; flex-direction: column;
+        align-items: center; color: #aaa; font-size: 9px; font-weight: bold;
     }
-    .pitch-mark::before {
-        content: '|';
-        display: block;
-        line-height: 1;
-        font-size: 10px;
-        height: 5px;
-    }
-    .pitch-mark.center {
-        color: #00ff00; /* Marqueur central de couleur vive */
-    }
+    .pitch-mark::before { content: '|'; display: block; line-height: 1; font-size: 10px; height: 5px; }
+    .pitch-mark.center { color: #00ff00; }
 
-    /* Positionnement des marques */
     #mark-neg-10 { left: 0%; transform: translateX(-50%); }
     #mark-neg-05 { left: 25%; transform: translateX(-50%); }
     #mark-zero { left: 50%; transform: translateX(-50%); }
@@ -180,52 +240,38 @@
     #mark-pos-10 { left: 100%; transform: translateX(-50%); }
     
     
-    /* Boutons de contrôle (Haut) */
-    #top-controls {
-        position: absolute; top: 2%; left: 50%; transform: translateX(-50%);
-        display: flex; gap: 15px; z-index: 60; padding: 10px; border-radius: 12px;
-    }
-    .control-button {
-        padding: 8px 15px; border-radius: 6px; font-size: 14px; font-weight: bold;
-        cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    }
-    .control-button:hover { transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.4); }
-
-    /* Le rectangle d'affichage (en haut à droite) */
-    #overlay-box {
-        position: absolute; top: 5%; right: 5%; width: 150px; height: 50px;
-        background-color: rgba(60, 60, 80, 0.7); border-radius: 8px;
-        display: flex; flex-direction: column; justify-content: center;
-        align-items: center; font-size: 14px; z-index: 20; 
-        
-        /* Transition pour l'opacité et positionnement initial */
-        transition: opacity 0.5s ease-out;
-    }
-
-    /* État caché initial */
-    .overlay-hidden { opacity: 0; pointer-events: none; }
-    
     /* ---------------------------------------------------- */
-    /* Styles pour le mode Mobile / Vue Zoom */
+    /* MOBILE (< 768px) */
     /* ---------------------------------------------------- */
     @media (max-width: 768px) {
-        /* Vinyle décalé vers la droite, bord gauche libre pour le pouce (mode scratch par défaut) */
-        /* NOUVEAU : Zoom plus grand (140%) et plus décalé (70%) */
         #vinyl-image { left: 70%; width: 140%; height: 140%; }
-
-        /* Centrage du vinyle en mode Vue Centrée sur mobile */
         #vinyl-image.centered-mobile { left: 50%; width: 80%; height: 80%; }
 
-        /* RPM et Pitch légèrement plus petits et plus hauts */
         #rpm-wrapper { bottom: 20px; left: 10px; padding: 8px; transform: scale(0.9); transform-origin: bottom left; }
-        #pitch-wrapper { bottom: 20px; right: 10px; padding: 8px; transform: scale(0.9); transform-origin: bottom right; width: 140px; } /* Ajustement pour le mobile */
+        #pitch-wrapper { bottom: 20px; right: 10px; padding: 8px; transform: scale(0.9); transform-origin: bottom right; width: 140px; }
 
-        /* Les contrôles du haut restent visibles */
-        #top-controls { top: 20px; padding: 5px 10px; background: rgba(0,0,0,0.5); border-radius: 8px; }
+        /* Optimisation du panneau de contrôle mobile */
+        .control-panel {
+            top: 10px;
+            left: 10px;
+            max-width: 65%; /* Laisser la place à l'overlay à droite */
+            gap: 5px;
+            padding: 5px 8px;
+        }
+        .vintage-btn {
+            padding: 5px 8px;
+            font-size: 10px;
+        }
+        
+        /* Overlay plus petit sur mobile */
+        #overlay-box {
+            top: 10px;
+            right: 10px;
+            padding: 5px 8px;
+        }
+        #current-rpm-display { font-size: 12px; }
     }
     
-    /* Classe pour le déplacement du vinyle en mode scratch sur desktop */
-    /* NOUVEAU : Même augmentation pour Desktop */
     .vinyl-scratch-desktop { left: 70% !important; width: 140% !important; height: 140% !important; }
     
 </style>
@@ -237,50 +283,33 @@
         <!-- Le conteneur de la platine -->
         <div id="turntable-container">
             
-            <!-- Le disque vinyle (au centre, ou décalé en mode zoom/scratch) -->
-            <div id="vinyl-image" class="touch-manipulation">
-                <!-- Étiquette centrale SVG (Invisible) -->
-                <svg viewBox="0 0 100 100" class="w-full h-full p-2">
-                    <circle cx="50" cy="50" r="48" fill="#e74c3c"/>
-                    <circle cx="50" cy="50" r="10" fill="#222"/>
-                    <text x="50" y="50" dominant-baseline="middle" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">SCRATCH</text>
-                </svg>
-            </div>
+            <!-- Le disque vinyle -->
+            <div id="vinyl-image" class="touch-manipulation"></div>
             
-            <!-- Contrôles du haut (Direction & Zoom) -->
-            <div id="top-controls">
-                <!-- Bouton Sens (Normal / Inversé) -->
-                <button id="direction-button" class="control-button bg-gray-600 text-white hover:bg-gray-700">Sens: Normal</button>
-                
-                <!-- Bouton Zoom / Vue Centrée -->
-                <button id="zoom-button" class="control-button bg-blue-500 text-white hover:bg-blue-600">Vue Centrée</button>
+            <!-- Contrôles Unifiés (Haut-Gauche) -->
+            <div class="control-panel">
+                <button id="stop-button" class="vintage-btn">Arrêt</button>
+                <button id="direction-button" class="vintage-btn">!</button> <!-- ! = Normal -->
+                <button id="zoom-button" class="vintage-btn">Zoom</button>
             </div>
 
-
-            <!-- Le rectangle d'affichage (en haut à droite) -->
-            <!-- NOUVEAU : Contenu simplifié (plus de label "Vitesse Actuelle" ni statusMessage) -->
+            <!-- Overlay (Haut-Droit) -->
             <div id="overlay-box" class="overlay-hidden">
-                <p id="current-rpm-display" class="text-2xl font-bold tracking-wider">STOP</p>
+                <p id="current-rpm-display">STOP</p>
             </div>
 
             <!-- Contrôle RPM (Bas-Gauche) -->
             <div id="rpm-wrapper">
-                <!-- 1. Étiquettes du haut (45 - OFF - 33) -->
                 <div class="rpm-labels">
                     <span data-mode="45">45</span>
                     <span data-mode="off">ARRÊT</span>
                     <span data-mode="33">33</span>
                 </div>
-
-                <!-- 2. Contrôles de points au milieu -->
                 <div id="rpm-controls">
                     <div class="rpm-choice" data-mode="45" title="45 RPM"></div>
                     <div class="rpm-choice active" data-mode="off" title="Arrêt"></div>
-                    <!-- Clé '33' utilisée pour la vitesse 33 1/3 RPM -->
                     <div class="rpm-choice" data-mode="33" title="33 1/3 RPM"></div> 
                 </div>
-
-                <!-- 3. Image du bouton en bas -->
                 <img id="rpm-img" 
                      src="https://tclaret.github.io/turntable/img/ChickenHead.png" 
                      alt="Bouton RPM"
@@ -290,11 +319,7 @@
             <!-- Pitch Control (Bas-Droite) -->
             <div id="pitch-wrapper">
                 <label for="pitch-slider" class="block text-xs font-semibold mb-1 text-center">PITCH (± 10%)</label>
-                
-                <!-- Curseur du Pitch -->
                 <input type="range" id="pitch-slider" min="-0.1" max="0.1" step="0.001" value="0.0" class="w-full">
-                
-                <!-- Échelle Visuelle -->
                 <div id="pitch-scale">
                     <span class="pitch-mark" id="mark-neg-10">-10</span>
                     <span class="pitch-mark" id="mark-neg-05">-5</span>
@@ -302,7 +327,6 @@
                     <span class="pitch-mark" id="mark-pos-05">+5</span>
                     <span class="pitch-mark" id="mark-pos-10">+10</span>
                 </div>
-
                 <div id="pitch-value" class="text-center text-xs mt-1">0.00 %</div>
             </div>
 
@@ -311,190 +335,144 @@
     </div>
 
     <script type="module">
-        // --- CONFIGURATION ET INITIALISATION ---
-        
-        // Simuler la configuration Firebase/Auth (essentiel pour l'environnement Canvas)
-        const __app_id = "default-app-id";
-        const __firebase_config = '{}'; 
-        const __initial_auth_token = undefined;
-        
-        // Configuration des vitesses de lecture de base (facteur pour Tone.js)
+        // --- CONFIGURATION ---
         const RPM_RATES = {"45": 1.35, "off": 0, "33": 1.0}; 
-        const RPM_ROTATION = {"45": -30, "off": 0, "33": 30}; // Rotation visuelle du bouton
+        const RPM_ROTATION = {"45": -30, "off": 0, "33": 30};
         
         // --- ÉTATS GLOBAUX ---
         let currentMode = "off";
         let pitchFactor = 1.0;
-        let directionFactor = 1.0; // 1.0 = Normal, -1.0 = Inversé (détermine le signe de playbackRate)
-        let targetBaseVelocity = 0; // Vitesse de lecture du moteur (RPM seulement)
+        let directionFactor = 1.0; 
+        let targetBaseVelocity = 0; 
+        let isScratchMode = false; 
         
-        let isScratchMode = false; // False = Vue Centrée, True = Vue Zoom/Scratch
-        
-        // Variables pour le Scratch ANGLULAIRE
+        // Scratch
         let isScratching = false;
-        let lastAngle = 0; // Angle précédent de la touche
-        let rotationDegrees = 0; // Rotation visuelle cumulée en degrés
-        let currentScratchVelocity = 0; // Vitesse angulaire (rate) instantanée pendant le scratch
+        let lastAngle = 0; 
+        let rotationDegrees = 0; 
+        let currentScratchVelocity = 0; 
         
-        const ANGULAR_MULTIPLIER = 0.015; // Sensibilité angulaire pour le taux de lecture audio
-        const VISUAL_RPM_MULTIPLIER = 50; // Facteur de vitesse visuelle pour la rotation du moteur
+        const ANGULAR_MULTIPLIER = 0.015; 
+        const VISUAL_RPM_MULTIPLIER = 50; 
         const REVERSE_SEEK_OFFSET = 0.05; 
         
-        // Infos Audio
+        // Audio
         let player = null;
         let normalBuffer = null; 
         let audioContextStarted = false;
         let bufferDuration = 0; 
-        
-        // Variable pour gérer l'affichage de l'overlay
         let overlayTimeoutId = null; 
         
-        // --- ÉLÉMENTS DU DOM ---
+        // --- DOM ---
         const turntableContainer = document.getElementById('turntable-container');
         const vinylImage = document.getElementById('vinyl-image');
         const rpmChoices = document.querySelectorAll('.rpm-choice');
+        const rpmLabels = document.querySelectorAll('.rpm-labels span');
         const rpmImg = document.getElementById('rpm-img');
         const currentRpmDisplay = document.getElementById('current-rpm-display');
-        // const statusMessage = document.getElementById('status-message'); // SUPPRIMÉ
         const pitchSlider = document.getElementById('pitch-slider');
         const pitchValueDisplay = document.getElementById('pitch-value');
         const directionButton = document.getElementById('direction-button');
         const zoomButton = document.getElementById('zoom-button');
+        const stopBtn = document.getElementById('stop-button');
         const rpmWrapper = document.getElementById('rpm-wrapper');
         const overlayBox = document.getElementById('overlay-box');
+        const audioErrorDiv = document.getElementById('audio-error');
 
-
-        // --- LOGIQUE D'AFFICHAGE/MASQUAGE DE L'OVERLAY ---
-
+        // --- OVERLAY ---
         const showOverlayBriefly = () => {
-            if (overlayTimeoutId) {
-                clearTimeout(overlayTimeoutId);
-            }
+            if (overlayTimeoutId) clearTimeout(overlayTimeoutId);
             overlayBox.classList.remove('overlay-hidden');
             overlayTimeoutId = setTimeout(() => {
                 overlayBox.classList.add('overlay-hidden');
             }, 1500);
         };
 
-        // --- CONFIGURATION AUDIO TONE.JS ---
-        
-        // Met à jour la vitesse de lecture audio en fonction du mode et des facteurs
+        // --- AUDIO ---
         const updatePlaybackRate = () => {
             if (!player || !player.loaded) return;
-
             let finalRate = 0;
-            
             if (isScratching) {
-                // En mode Scratch: la vitesse est déterminée par le mouvement de la main
                 finalRate = currentScratchVelocity * directionFactor; 
             } else {
-                // Mode Moteur: RPM * Pitch * Direction
                 finalRate = targetBaseVelocity * pitchFactor * directionFactor;
             }
-            
-            // Appliquer la vitesse au lecteur Tone.js
             player.playbackRate = finalRate;
         };
 
-        // Fonction pour charger l'audio
         async function loadAudio() {
-            // NOUVEAU: Affichage simplifié pour le chargement
-            // On n'affiche rien dans l'overlay principal pour le chargement pour rester minimaliste
-            // ou on pourrait afficher "LOADING..." si souhaité. 
-            // Pour l'instant, on laisse vide ou STOP jusqu'à ce que ce soit prêt.
-
             const audioUrl = "https://tclaret.github.io/turntable/JB_Cold_Sweat.opus";
-            
             try {
-                // 1. Charger le buffer normal
                 normalBuffer = await new Tone.Buffer(audioUrl, 
-                    // Succès
                     () => {
                         bufferDuration = normalBuffer.duration;
-                        
-                        // 2. Créer le lecteur Tone.js (une fois le buffer chargé)
                         try {
                             player = new Tone.Player(normalBuffer).toDestination();
                             player.loop = true;
                             player.playbackRate = 0; 
                             player.start(0); 
-                            
                         } catch (e) {
-                            console.error("Erreur lors de la création du lecteur Tone.js:", e);
+                            console.error("Erreur Player:", e);
                         }
                     },
-                    // Erreur
                     (error) => {
-                        console.error("Erreur de chargement audio (CORS/MIME type OPUS):", error);
+                        console.error("Erreur Load:", error);
+                        audioErrorDiv.style.display = 'block';
                     }
                 );
             } catch (error) {
-                console.error("Erreur Tone.js:", error);
+                console.error("Erreur Tone:", error);
             }
         }
 
-        // --- GESTION DU MODE RPM & VITESSE ---
-
-        // Fonction principale pour définir le mode RPM
+        // --- CONTRÔLE RPM ---
         const setRpmMode = (mode) => {
             if (!player || !player.loaded) return;
             if (currentMode === mode && mode !== 'off') return; 
 
             currentMode = mode;
-            
-            // 1. Mise à jour des points lumineux
             rpmChoices.forEach(c => c.classList.remove('active'));
             document.querySelector(`.rpm-choice[data-mode='${mode}']`).classList.add('active');
-
-            // 2. Mise à jour de la rotation du bouton (Chicken Head)
             rpmImg.style.transform = `rotate(${RPM_ROTATION[mode]}deg)`;
             
-            // 3. Mise à jour de l'état du moteur
             if (mode === 'off') {
                 targetBaseVelocity = 0;
                 currentRpmDisplay.textContent = 'STOP';
             } else {
                 targetBaseVelocity = RPM_RATES[mode];
-                // NOUVEAU: Affichage simplifié 33 RPM / 45 RPM
                 currentRpmDisplay.textContent = mode + ' RPM';
             }
-            
             showOverlayBriefly();
             updatePlaybackRate();
         };
 
-        // GESTION DU PITCH (Met à jour le facteur, appelle updatePlaybackRate)
+        // --- PITCH ---
         pitchSlider.addEventListener('input', () => {
             pitchFactor = 1.0 + parseFloat(pitchSlider.value);
             pitchValueDisplay.textContent = (parseFloat(pitchSlider.value) * 100).toFixed(2) + ' %';
-            if (!isScratching) {
-                updatePlaybackRate();
-            }
+            if (!isScratching) updatePlaybackRate();
         });
 
-        // GESTION DE LA DIRECTION (NORMAL/INVERSÉ)
+        // --- DIRECTION (Updated Button Text with Custom Font) ---
         directionButton.addEventListener('click', () => {
-            directionFactor *= -1; // Basculer entre 1.0 et -1.0
-            
-            // Mise à jour de l'interface
+            directionFactor *= -1; 
             if (directionFactor === 1.0) {
-                directionButton.textContent = 'Sens: Normal';
-                directionButton.classList.remove('bg-red-700');
-                directionButton.classList.add('bg-gray-600');
+                directionButton.textContent = '!'; // Normal
+                directionButton.classList.remove('reverse-active');
             } else {
-                directionButton.textContent = 'Sens: Inversé';
-                directionButton.classList.remove('bg-gray-600');
-                directionButton.classList.add('bg-red-700');
+                directionButton.textContent = 'Reverse'; // Inversé
+                directionButton.classList.add('reverse-active');
             }
-            
-            // On n'affiche pas de message spécial pour la direction, juste le RPM actuel
             showOverlayBriefly();
             updatePlaybackRate();
         });
 
+        // --- STOP BUTTON ---
+        stopBtn.addEventListener('click', () => {
+            setRpmMode('off');
+        });
 
-        // --- LOGIQUE DE POSITIONNEMENT SCRATCH/ZOOM ---
-        
+        // --- ZOOM / SCRATCH VIEW ---
         const isMobile = () => window.innerWidth <= 768;
 
         const updateScratchModeUI = () => {
@@ -512,7 +490,6 @@
                     vinylImage.classList.add('vinyl-scratch-desktop');
                     rpmWrapper.classList.add('rpm-scratch-centered');
                     zoomButton.textContent = 'Vue Centrée';
-                    // NOUVEAU: Zoom plus puissant sur Desktop (1.7x)
                     turntableContainer.style.transform = "scale(1.7)";
                 } else {
                     vinylImage.classList.remove('vinyl-scratch-desktop');
@@ -527,22 +504,14 @@
             isScratchMode = !isScratchMode;
             updateScratchModeUI();
         });
-        
         window.addEventListener('resize', updateScratchModeUI);
 
 
-        // --- LOGIQUE DE SCRATCH (Souris & Touch) ---
-        
-        // Fonction utilitaire pour obtenir le centre du vinyle (coordonnées d'écran)
+        // --- LOGIQUE SCRATCH ---
         const getVinylCenter = () => {
             const rect = vinylImage.getBoundingClientRect();
-            return {
-                x: rect.left + rect.width / 2,
-                y: rect.top + rect.height / 2
-            };
+            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
         };
-
-        // Fonction utilitaire pour obtenir l'angle de la position (x, y) par rapport au centre
         const getAngle = (x, y, centerX, centerY) => {
             const dx = x - centerX;
             const dy = y - centerY;
@@ -551,64 +520,42 @@
         
         const startScratch = (clientX, clientY) => {
             if (!player || currentMode === 'off' || !player.loaded) return;
-            
             if (!audioContextStarted) {
                 Tone.start();
                 audioContextStarted = true;
             }
-
             isScratching = true;
             vinylImage.style.cursor = 'grabbing';
-            
-            // Calculer et stocker l'angle initial
             const center = getVinylCenter();
             lastAngle = getAngle(clientX, clientY, center.x, center.y);
-            
-            // NOUVEAU: Affichage simplifié
-            currentRpmDisplay.textContent = 'SCRATCHING...';
+            currentRpmDisplay.textContent = 'SCRATCHING';
             showOverlayBriefly();
-            
             updatePlaybackRate();
         };
 
         const moveScratch = (clientX, clientY) => {
             if (!isScratching) return;
-
             const center = getVinylCenter();
             const currentAngle = getAngle(clientX, clientY, center.x, center.y);
-            
             let deltaAngle = currentAngle - lastAngle;
-
-            // Gestion du "wrap-around"
-            if (deltaAngle > 180) {
-                deltaAngle -= 360;
-            } else if (deltaAngle < -180) {
-                deltaAngle += 360;
-            }
+            if (deltaAngle > 180) deltaAngle -= 360;
+            else if (deltaAngle < -180) deltaAngle += 360;
 
             currentScratchVelocity = deltaAngle * ANGULAR_MULTIPLIER;
             rotationDegrees += deltaAngle;
             lastAngle = currentAngle;
-            
             updatePlaybackRate();
         };
 
         const endScratch = () => {
             if (!isScratching) return;
-            
             isScratching = false;
             currentScratchVelocity = 0; 
-            
             vinylImage.style.cursor = 'grab';
-
             updatePlaybackRate(); 
-
-            // NOUVEAU: Retour à l'affichage standard
             currentRpmDisplay.textContent = currentMode === 'off' ? 'STOP' : currentMode + ' RPM';
             showOverlayBriefly();
         };
-        
-        // --- ÉVÉNEMENTS MOUSE ET TOUCH ---
         
         vinylImage.addEventListener('mousedown', (e) => startScratch(e.clientX, e.clientY));
         turntableContainer.addEventListener('mousemove', (e) => moveScratch(e.clientX, e.clientY));
@@ -616,83 +563,51 @@
         turntableContainer.addEventListener('mouseleave', endScratch);
         
         vinylImage.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) { 
-                startScratch(e.touches[0].clientX, e.touches[0].clientY); 
-            }
+            if (e.touches.length === 1) startScratch(e.touches[0].clientX, e.touches[0].clientY);
         });
         turntableContainer.addEventListener('touchmove', (e) => {
             e.preventDefault(); 
-            if (e.touches.length === 1) { 
-                moveScratch(e.touches[0].clientX, e.touches[0].clientY); 
-            }
+            if (e.touches.length === 1) moveScratch(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: false }); 
         turntableContainer.addEventListener('touchend', endScratch);
         turntableContainer.addEventListener('touchcancel', endScratch);
 
-
-        // --- BOUCLE D'ANIMATION VISUELLE ET AUDIO (VSYNC) ---
-        
+        // --- ANIMATION LOOP ---
         let lastTime = performance.now(); 
-
         function animate() {
             requestAnimationFrame(animate);
-
-            if (!player || !player.loaded || bufferDuration === 0) {
-                return;
-            }
+            if (!player || !player.loaded || bufferDuration === 0) return;
 
             const now = performance.now(); 
             const dt = (now - lastTime) / 1000; 
             lastTime = now;
             
             const currentRate = player.playbackRate; 
-
-            if (currentRate < 0) {
-                const currentTime = player.now(); 
-                if (currentTime <= REVERSE_SEEK_OFFSET) { 
+            if (currentRate < 0) { // Loop inversé
+                if (player.now() <= REVERSE_SEEK_OFFSET) { 
                     player.seek(bufferDuration - REVERSE_SEEK_OFFSET); 
                 }
             }
             
             if (isScratching) {
-                if (Math.abs(currentScratchVelocity) > 0.0001) {
-                    currentScratchVelocity *= 0.95; 
-                }
+                if (Math.abs(currentScratchVelocity) > 0.0001) currentScratchVelocity *= 0.95; 
             } else if (currentRate !== 0) {
                 rotationDegrees += currentRate * VISUAL_RPM_MULTIPLIER * dt * 60; 
             }
-            
             vinylImage.style.transform = `translate(-50%, -50%) rotate(${rotationDegrees}deg)`;
         }
 
-
-        // --- INITIALISATION GLOBALE ---
-
-        // RPM Click Handlers 
-        rpmChoices.forEach(choice => {
-            choice.addEventListener('click', () => {
-                const mode = choice.getAttribute('data-mode');
-                setRpmMode(mode);
-            });
-        });
-        
-        // Chicken Head Click Handler
-        rpmImg.addEventListener('click', () => {
-            if (currentMode === 'off') {
-                setRpmMode('33'); 
-            } else {
-                setRpmMode(currentMode === '33' ? '45' : '33');
-            }
-        });
+        // --- INIT ---
+        rpmChoices.forEach(choice => choice.addEventListener('click', () => setRpmMode(choice.dataset.mode)));
+        rpmLabels.forEach(l => l.addEventListener('click', (e) => setRpmMode(e.target.dataset.mode)));
+        rpmImg.addEventListener('click', () => setRpmMode(currentMode === 'off' ? '33' : (currentMode === '33' ? '45' : '33')));
 
         window.onload = function() {
             loadAudio();
             animate();
-            
             isScratchMode = isMobile() ? false : true; 
             updateScratchModeUI();
         }
-
     </script>
 </body>
 </html>
