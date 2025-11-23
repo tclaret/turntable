@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turntable 3D Redesign - Ancrage Amélioré</title>
+    <style>
+        /* CSS pour l'aspect 3D et l'inclinaison */
+        body {
+            background-color: #f0f0f0; 
+            display: flex;
+            flex-direction: column; 
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden; 
+            font-family: Arial, sans-serif;
+        }
+
+        /* 1. Conteneur principal des contrôles (2D - Fixe en haut) */
+        .turntable-controls-overlay {
+            width: 100%;
+            background-color: #333; 
+            color: white;
+            padding: 10px 0; 
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            position: fixed; 
+            top: 0;
+            z-index: 100; 
+        }
+
+        /* Styles des contrôles (inchangés) */
+        .controls-line {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px; 
+            padding: 5px 0; 
+        }
+
+        .control-btn {
+            cursor: pointer;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #777;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .control-btn.active { background-color: #c0392b; }
+        .control-btn:hover { background-color: #999; }
+
+        .pitch-group { display: flex; align-items: center; gap: 5px; color: #ccc; }
+        .pitch-slider {
+            -webkit-appearance: none;
+            width: 100px; 
+            height: 10px;
+            background: #999;
+            outline: none;
+            border-radius: 5px;
+            padding: 0; 
+        }
+        .pitch-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px;
+            background: #2c3e50; border-radius: 50%; cursor: pointer;
+        }
+
+        /* 2. Scène 3D */
+        .scene {
+            perspective: 500px; 
+            width: 80vw; 
+            height: 80vh; 
+            position: relative;
+            margin-top: 100px; 
+        }
+
+        /* 3. Corps de la platine (incliné à 70°) */
+        .turntable-base {
+            width: 90vw; 
+            height: 10vw; /* NOUVEAU : Plus épaisse pour un meilleur ancrage */
+            background-color: #555; 
+            border-radius: 5px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            position: absolute;
+            bottom: 0; 
+            left: 50%;
+            /* Inclinaison à 70 degrés, et ajustement pour la nouvelle hauteur */
+            transform: translateX(-50%) translateY(3vw) rotateX(70deg); /* NOUVEAU: Le translateY ramène légèrement l'objet vers le haut */
+            transform-origin: bottom center; 
+        }
+
+        /* 4. Disque Vinyle (Incliné à 70°) */
+        .record-container {
+            width: 75vw; 
+            height: 75vw; 
+            position: absolute; 
+            /* NOUVEAU : Positionné plus bas pour être plus proche de la base */
+            top: 60%; 
+            left: 50%;
+            transform: translate(-50%, -50%) rotateX(70deg); 
+            transform-style: preserve-3d; 
+            transform-origin: center center; 
+            
+            background-color: #888; 
+            border-radius: 50%; 
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4); 
+        }
+        
+        .platter {
+            width: 90%; height: 90%; background-color: #444; border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .vinyl-record {
+            width: 90%; height: 90%; border-radius: 50%;
+            background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+            
+            border: 0.5vw solid #0a0a0a; 
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7); 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); 
+            
+            animation: spin 3s linear infinite running; 
+            transform-origin: center center;
+        }
+
+        .vinyl-record::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); 
+            width: 1.5vw; 
+            height: 1.5vw;
+            border-radius: 50%; 
+            background-color: #000; z-index: 2; 
+        }
+
+        /* Keyframes (inchangés) */
+        @keyframes spin {
+            from { transform: translate(-50%, -50%) rotateZ(0deg); }
+            to { transform: translate(-50%, -50%) rotateZ(360deg); }
+        }
+        @keyframes spin-reverse { 
+            from { transform: translate(-50%, -50%) rotateZ(0deg); }
+            to { transform: translate(-50%, -50%) rotateZ(-360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="turntable-controls-overlay">
+        <div class="controls-line">
+            <button id="stop-btn" class="control-btn active">STOP</button>
+            <button id="direction-btn" class="control-btn">Direction</button> 
+            
+            <button id="rpm33-btn" class="control-btn">33 RPM</button>
+            <button id="rpm45-btn" class="control-btn">45 RPM</button>
+        </div>
+        
+        <div class="controls-line pitch-group">
+            <span>Pitch:</span>
+            <input type="range" id="pitch-slider" class="pitch-slider" min="0.5" max="1.5" step="0.01" value="1.0">
+        </div>
+    </div>
+
+    <div class="scene">
+        <div class="turntable-base"></div>
+        <div class="record-container">
+            <div class="platter"></div>
+            <div class="vinyl-record"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const vinyl = document.querySelector('.vinyl-record');
+            const stopBtn = document.getElementById('stop-btn');
+            const rpm33Btn = document.getElementById('rpm33-btn');
+            const rpm45Btn = document.getElementById('rpm45-btn');
+            const pitchSlider = document.getElementById('pitch-slider');
+            const directionBtn = document.getElementById('direction-btn');
+            
+            let isRunning = false;
+            let currentSpeed = 3; 
+            let isReversed = false;
+
+            function updateAnimation() {
+                const pitchFactor = parseFloat(pitchSlider.value);
+                const animationDuration = (currentSpeed / pitchFactor).toFixed(2); 
+
+                vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
+                vinyl.style.animationDuration = `${animationDuration}s`;
+                vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
+            }
+
+            function setSpeed(speedDuration, button) {
+                [stopBtn, rpm33Btn, rpm45Btn].forEach(btn => btn.classList.remove('active'));
+
+                if (speedDuration === 0) { 
+                    isRunning = false;
+                    button.classList.add('active');
+                } else {
+                    currentSpeed = speedDuration;
+                    isRunning = true;
+                    button.classList.add('active');
+                }
+                updateAnimation();
+            }
+
+            stopBtn.addEventListener('click', () => setSpeed(0, stopBtn));
+            rpm33Btn.addEventListener('click', () => setSpeed(3, rpm33Btn)); 
+            rpm45Btn.addEventListener('click', () => setSpeed(2.2, rpm45Btn)); 
+
+            pitchSlider.addEventListener('input', () => {
+                if (isRunning) {
+                    updateAnimation();
+                }
+            });
+
+            directionBtn.addEventListener('click', () => {
+                isReversed = !isReversed;
+                directionBtn.classList.toggle('active', isReversed);
+                if (isRunning) {
+                    updateAnimation();
+                }
+            });
+
+            setSpeed(0, stopBtn); 
+        });
+    </script>
+</body>
+</html>
