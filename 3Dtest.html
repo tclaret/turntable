@@ -3,186 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turntable 3D Redesign - Bras de Lecture Amélioré</title>
+    <title>Turntable 3D Redesign - Bras de Lecture Coin Supérieur Droit Visible</title>
     <style>
-        /* CSS Général */
-        body {
-            background-color: #f0f0f0; 
-            display: flex;
-            flex-direction: column; 
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow-x: hidden; 
-            font-family: Arial, sans-serif;
-        }
+/* ------------------------------------ */
+/* 0. VARIABLES CSS GLOBALES            */
+/* ------------------------------------ */
+:root {
+    --color-primary: #c0392b; /* Rouge (Active/Accent) */
+    --color-base: #555;       /* Gris foncé (Base platine) */
+    --color-control: #333;    /* Noir (Contrôles) */
+    --pitch-slider-color: #2c3e50;
+    --speed-33-duration: 3.00s; /* Durée d'une rotation à 33 RPM */
+}
 
-        /* 1. Interface de Contrôles (2D - Fixe en haut) */
-        .interface-controls {
-            width: 100%; background-color: #333; color: white; padding: 10px 0; 
-            display: flex; flex-direction: column; align-items: center;
-            position: fixed; top: 0; z-index: 100; 
-        }
-        .controls-line {
-            display: flex; justify-content: center; align-items: center; gap: 15px; padding: 5px 0; 
-        }
-        .control-btn {
-            cursor: pointer; border: none; padding: 8px 12px; border-radius: 4px;
-            font-size: 14px; font-weight: bold; background-color: #777; color: white;
-            transition: background-color 0.2s;
-        }
-        .control-btn.active { background-color: #c0392b; }
-        .control-btn:hover { background-color: #999; }
-        .pitch-group { display: flex; align-items: center; gap: 5px; color: #ccc; }
-        .pitch-slider {
-            -webkit-appearance: none; width: 100px; height: 10px; background: #999;
-            outline: none; border-radius: 5px; padding: 0; 
-        }
-        .pitch-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 20px; height: 20px; background: #2c3e50; border-radius: 50%; cursor: pointer;
-        }
+/* ------------------------------------ */
+/* 1. CSS Général & Contrôles           */
+/* ------------------------------------ */
+body {
+    background-color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+    font-family: Arial, sans-serif;
+}
 
-        /* 2. Scène 3D */
-        .scene {
-            perspective: 500px; width: 80vw; height: 80vh; position: relative;
-            margin-top: 100px; 
-        }
+.interface-controls {
+    width: 100%; 
+    background-color: var(--color-control); 
+    color: white; 
+    padding: 10px 0;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    position: fixed; 
+    top: 0; 
+    z-index: 100; 
+}
+.controls-line {
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 15px; 
+    padding: 5px 0;
+}
+.control-btn {
+    cursor: pointer; 
+    border: none; 
+    padding: 8px 12px; 
+    border-radius: 4px;
+    font-size: 14px; 
+    font-weight: bold; 
+    background-color: #777; 
+    color: white;
+    transition: background-color 0.2s;
+}
+.control-btn.active { 
+    background-color: var(--color-primary); 
+}
+.control-btn:hover { 
+    background-color: #999; 
+}
+.pitch-group { 
+    display: flex; 
+    align-items: center; 
+    gap: 5px; 
+    color: #ccc; 
+}
+.pitch-group label {
+    font-size: 14px;
+}
+.pitch-slider {
+    -webkit-appearance: none; 
+    width: 100px; 
+    height: 10px; 
+    background: #999;
+    outline: none; 
+    border-radius: 5px; 
+    padding: 0;
+}
+.pitch-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; 
+    appearance: none;
+    width: 20px; 
+    height: 20px; 
+    background: var(--pitch-slider-color); 
+    border-radius: 50%; 
+    cursor: pointer;
+}
 
-        /* 3. Corps de la platine (incliné à 70°) */
-        .turntable-base {
-            width: 90vw; height: 10vw; background-color: #555; border-radius: 5px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-            position: absolute; bottom: 0; left: 50%;
-            transform: translateX(-50%) translateY(3vw) rotateX(70deg); 
-            transform-origin: bottom center; 
-            transform-style: preserve-3d;
-            z-index: 5; /* Assurer que la base est au-dessus du disque */
-        }
+/* ------------------------------------ */
+/* 2. Scène 3D & Platine                */
+/* ------------------------------------ */
+.scene {
+    perspective: 500px; 
+    width: 80vw; 
+    height: 80vh; 
+    position: relative;
+    margin-top: 100px;
+}
+.turntable-base {
+    width: 90vw; 
+    height: 10vw; 
+    background-color: var(--color-base); 
+    border-radius: 5px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    position: absolute; 
+    bottom: 0; 
+    left: 50%;
+    transform: translateX(-50%) translateY(3vw) rotateX(70deg); 
+    transform-origin: bottom center;
+    transform-style: preserve-3d;
+    z-index: 5;
+}
 
-        /* 4. SÉLECTEUR DE VITESSE (Chicken Head) - inchangé */
-        .speed-selector-container {
-            position: absolute; top: 1.5vw; left: 5vw; z-index: 10;
-            transform: rotateX(-70deg); 
-            transform-style: preserve-3d; cursor: pointer;
-        }
-        .selector-label {
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-            font-size: 1.8vw; color: #eee; width: 150%; text-align: center;
-        }
-        .selector-base {
-            width: 9.6vw; height: 9.6vw; 
-            background-image: url('https://tclaret.github.io/turntable/img/ChickenHead.png');
-            background-size: cover; background-position: center; border-radius: 50%;
-            position: relative; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) inset;
-        }
-        .selector-knob {
-            width: 4.8vw; height: 4.8vw; background-color: #000; border-radius: 50%;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.7); transition: transform 0.3s ease-in-out;
-        }
-        .selector-knob::before {
-            content: ''; position: absolute; width: 1.8vw; height: 0.6vw;
-            background-color: #c0392b; top: 0.5vw; left: 50%; transform: translateX(-50%);
-            border-radius: 1px;
-        }
+/* ------------------------------------ */
+/* 3. SÉLECTEUR DE VITESSE (Chicken Head) */
+/* ------------------------------------ */
+.speed-selector-container {
+    position: absolute; 
+    top: 1.5vw; 
+    left: 35vw;
+    z-index: 10;
+    transform: rotateX(-70deg);
+    transform-style: preserve-3d; 
+    cursor: pointer;
+}
+.selector-label {
+    position: absolute; 
+    top: -15px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    font-size: 1.8vw; 
+    color: #eee; 
+    width: 150%; 
+    text-align: center;
+}
+.selector-base {
+    width: 9.6vw; 
+    height: 9.6vw;
+    background-image: url('https://tclaret.github.io/turntable/img/ChickenHead.png');
+    background-size: cover; 
+    background-position: center; 
+    border-radius: 50%;
+    position: relative; 
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) inset;
+}
+.selector-knob {
+    width: 4.8vw; 
+    height: 4.8vw; 
+    background-color: #000; 
+    border-radius: 50%;
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); /* Base 0deg */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.7); 
+    transition: transform 0.3s ease-in-out;
+}
+.selector-knob::before {
+    content: ''; 
+    position: absolute; 
+    width: 1.8vw; 
+    height: 0.6vw;
+    background-color: var(--color-primary); 
+    top: 0.5vw; 
+    left: 50%; 
+    transform: translateX(-50%);
+    border-radius: 1px;
+}
 
-        /* 5. BRAS DE LECTURE (Modifications pour la visibilité) */
-        .tonearm-container {
-            position: absolute;
-            right: 18vw; /* MODIFIÉ : Décalé plus à droite */
-            top: -1vw; /* MODIFIÉ : Légèrement remonté */
-            z-index: 15; /* S'assurer qu'il est au-dessus de tout */
-            transform: rotateX(-70deg) rotateY(0deg) rotateZ(0deg); 
-            transform-origin: center;
-            transform-style: preserve-3d;
-            pointer-events: none;
-        }
+/* ------------------------------------ */
+/* 4. BRAS DE LECTURE (POSITIONNEMENT CORRIGÉ) */
+/* ------------------------------------ */
+.tonearm-container {
+    position: absolute;
+    /* Décaler encore plus le conteneur vers la droite et le haut de la platine */
+    right: 2vw;   /* Plus près du bord droit de la platine */
+    top: -10vw;   /* Plus haut sur la platine */
+    z-index: 15;
+    /* Rotation de repos (bras pointant vers l'extérieur droit) */
+    transform: rotateX(-70deg) rotateZ(-60deg); 
+    /* L'origine du pivot est maintenant le coin haut-droit du conteneur lui-même */
+    transform-origin: 100% 50%; 
+    transform-style: preserve-3d;
+    width: 5vw; /* Agrandir le conteneur pour mieux simuler la base du bras */
+    height: 5vw;
+    background-color: #222; 
+    border-radius: 50%;
+    pointer-events: none;
+    transition: transform 0.5s ease-out; 
+}
 
-        .tonearm-pivot {
-            width: 2vw; height: 2vw; 
-            background-color: #333;
-            border-radius: 50%;
-            position: absolute;
-            top: 0; left: 0;
-            transform-style: preserve-3d;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-            transform: rotateY(0deg); 
-            transform-origin: center center;
-        }
+.tonearm-image {
+    width: 50vw; 
+    height: 50vw; 
+    position: absolute;
+    /* Positionner l'image pour que son extrémité droite s'aligne avec le pivot */
+    left: -48vw; /* Décaler l'image vers la gauche */
+    top: -25vw; 
+    /* L'origine de l'image (son "pivot interne") est maintenant son extrémité droite */
+    transform-origin: 100% 50%; 
+    background-image: url('https://tclaret.github.io/turntable/img/BrasDeLecture.png');
+    background-size: 100% auto;
+    background-repeat: no-repeat;
+    background-position: left center;
+    transform: none; 
+}
 
-        .tonearm {
-            width: 20vw; /* MODIFIÉ : Bras plus long */
-            height: 1.2vw; /* MODIFIÉ : Bras plus épais */
-            background-color: #888;
-            border-radius: 0.6vw; /* Ajusté */
-            position: absolute;
-            left: 1vw; 
-            top: 0vw; /* Centré verticalement sur l'axe du pivot */
-            transform-origin: left center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            /* Rotation pour le poser sur le disque */
-            transform: rotateY(20deg) rotateZ(-10deg); 
-            display: flex;
-            align-items: center;
-            justify-content: flex-end; 
-        }
+/* ------------------------------------ */
+/* 5. Disque Vinyle (inchangé)          */
+/* ------------------------------------ */
+.record-container {
+    width: 75vw; height: 75vw;
+    position: absolute; top: 60%; left: 50%;
+    transform: translate(-50%, -50%) rotateX(70deg);
+    transform-style: preserve-3d; transform-origin: center center;
+    background-color: #888; border-radius: 50%;
+    z-index: 1; /* Le disque est en dessous du bras */
+}
 
-        .cartridge {
-            width: 1.5vw; 
-            height: 1.5vw;
-            background-color: #c0392b; 
-            border-radius: 2px;
-            position: absolute;
-            right: -0.5vw; 
-            top: -0.5vw; /* MODIFIÉ : Ajustement vertical */
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-            transform: rotateY(-10deg) rotateX(10deg);
-        }
+.platter {
+    width: 90%; height: 90%; background-color: #444; border-radius: 50%;
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
 
+.vinyl-record {
+    width: 90%; height: 90%; border-radius: 50%;
+    background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    border: 0.5vw solid #0a0a0a; box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    animation: spin var(--speed-33-duration) linear infinite running; 
+    transform-origin: center center;
+}
 
-        /* 6. Disque Vinyle (inchangé) */
-        .record-container {
-            width: 75vw; height: 75vw; 
-            position: absolute; top: 60%; left: 50%;
-            transform: translate(-50%, -50%) rotateX(70deg); 
-            transform-style: preserve-3d; transform-origin: center center; 
-            background-color: #888; border-radius: 50%; 
-            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4); 
-            z-index: 1; /* Assurer que le disque est en dessous de la base */
-        }
-        
-        /* ... (platter, vinyl-record, after, keyframes - styles inchangés) ... */
-        .platter {
-            width: 90%; height: 90%; background-color: #444; border-radius: 50%;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-        }
+.vinyl-record::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); width: 1.5vw; height: 1.5vw;
+    border-radius: 50%; background-color: #000; z-index: 2;
+}
 
-        .vinyl-record {
-            width: 90%; height: 90%; border-radius: 50%;
-            background-image: url('https://tclaret.github.io/turntable/img/DISC.png');
-            background-size: cover; background-position: center; background-repeat: no-repeat; 
-            border: 0.5vw solid #0a0a0a; box-shadow: 0 0 15px rgba(0, 0, 0, 0.7); 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            animation: spin 3s linear infinite running; transform-origin: center center;
-        }
-
-        .vinyl-record::after {
-            content: ''; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); width: 1.5vw; height: 1.5vw;
-            border-radius: 50%; background-color: #000; z-index: 2; 
-        }
-
-        @keyframes spin {
-            from { transform: translate(-50%, -50%) rotateZ(0deg); }
-            to { transform: translate(-50%, -50%) rotateZ(360deg); }
-        }
-        @keyframes spin-reverse { 
-            from { transform: translate(-50%, -50%) rotateZ(0deg); }
-            to { transform: translate(-50%, -50%) rotateZ(-360deg); }
-        }
+@keyframes spin {
+    from { transform: translate(-50%, -50%) rotateZ(0deg); }
+    to { transform: translate(-50%, -50%) rotateZ(360deg); }
+}
+@keyframes spin-reverse {
+    from { transform: translate(-50%, -50%) rotateZ(0deg); }
+    to { transform: translate(-50%, -50%) rotateZ(-360deg); }
+}
     </style>
 </head>
 <body>
@@ -193,12 +266,12 @@
             <button id="setstop-btn" class="control-btn active">SET STOP</button>
             <button id="set45-btn" class="control-btn">SET 45 RPM</button>
         </div>
-        
+
         <div class="controls-line">
-            <button id="direction-btn" class="control-btn">Direction</button>
+            <button id="direction-btn" class="control-btn">Direction (Reverse)</button>
             <div class="pitch-group">
-                <span>Pitch:</span>
-                <input type="range" id="pitch-slider" class="pitch-slider" min="0.5" max="1.5" step="0.01" value="1.0">
+                <label for="pitch-slider">Pitch (Vitesse):</label>
+                <input type="range" id="pitch-slider" class="pitch-slider" min="0.5" max="1.5" step="0.01" value="1.0" aria-label="Contrôle du pitch de la vitesse de lecture">
             </div>
         </div>
     </div>
@@ -212,10 +285,8 @@
                 </div>
             </div>
 
-            <div class="tonearm-container">
-                <div class="tonearm-pivot"></div>
-                <div class="tonearm">
-                    <div class="cartridge"></div>
+            <div id="tonearm-container" class="tonearm-container">
+                <div class="tonearm-image">
                 </div>
             </div>
         </div>
@@ -227,6 +298,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Constantes du DOM
             const vinyl = document.querySelector('.vinyl-record');
             const knob = document.getElementById('speed-knob');
             const set33Btn = document.getElementById('set33-btn');
@@ -234,49 +306,85 @@
             const set45Btn = document.getElementById('set45-btn');
             const directionBtn = document.getElementById('direction-btn');
             const pitchSlider = document.getElementById('pitch-slider');
+            const tonearmContainer = document.getElementById('tonearm-container'); 
+
+            // Constantes de Vitesse (Réelles)
+            const RPM_33 = 33.33;
+            const RPM_45 = 45;
             
+            // Récupère la durée de base définie dans le CSS
+            const BASE_DURATION = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed-33-duration').replace('s', ''));
+
+            // État de la platine
             let isRunning = false;
-            let currentSpeed = 0; 
+            let currentSpeedDuration = BASE_DURATION; 
             let isReversed = false;
 
+
+            /**
+             * Calcule la durée d'animation requise en fonction du RPM cible.
+             */
+            function getAnimationDuration(rpm) {
+                if (rpm === 0) return 1000;
+                const duration = BASE_DURATION * (RPM_33 / rpm);
+                return duration.toFixed(2);
+            }
+
+            /**
+             * Met à jour l'animation du disque.
+             */
             function updateAnimation() {
                 const pitchFactor = parseFloat(pitchSlider.value);
-                const animationDuration = currentSpeed === 0 ? 1000 : (currentSpeed / pitchFactor).toFixed(2); 
+                let finalDuration;
+
+                if (isRunning) {
+                    finalDuration = (currentSpeedDuration / pitchFactor).toFixed(2);
+                } else {
+                    finalDuration = 1000; 
+                }
 
                 vinyl.style.animationName = isReversed ? 'spin-reverse' : 'spin';
-                vinyl.style.animationDuration = `${animationDuration}s`;
+                vinyl.style.animationDuration = `${finalDuration}s`;
                 vinyl.style.animationPlayState = isRunning ? 'running' : 'paused';
             }
 
-            function setSpeedAndKnob(speed, rpm, button) {
+            /**
+             * Définit la vitesse et met à jour les indicateurs visuels et le bras.
+             */
+            function setSpeedAndKnob(rpm, button) {
                 [set33Btn, setStopBtn, set45Btn].forEach(btn => btn.classList.remove('active'));
 
                 let knobRotation = 0;
-                
-                if (rpm === 33) {
-                    currentSpeed = 3;
-                    isRunning = true;
-                    knobRotation = -30; 
-                } else if (rpm === 45) {
-                    currentSpeed = 2.2;
-                    isRunning = true;
-                    knobRotation = 30; 
-                } else { // STOP
-                    currentSpeed = 0;
-                    isRunning = false;
-                    knobRotation = 0; 
-                }
-                
-                knob.style.transform = `translate(-50%, -50%) rotateZ(${knobRotation}deg)`;
+                // Position de repos du bras (vers l'extérieur droit)
+                let armRotationZ = -60; 
 
+                if (rpm === RPM_33 || rpm === RPM_45) {
+                    currentSpeedDuration = getAnimationDuration(rpm);
+                    isRunning = true;
+                    knobRotation = (rpm === RPM_33) ? -30 : 30;
+                    // Position de lecture du bras (sur le disque, tête vers le centre/droite)
+                    // AJUSTEZ CETTE VALEUR POUR LE POSITIONNEMENT FINAL DE L'AIGUILLE : 
+                    armRotationZ = -10; 
+                } else { // STOP (rpm = 0)
+                    currentSpeedDuration = 0;
+                    isRunning = false;
+                    knobRotation = 0;
+                    // armRotationZ reste à -60 (repos)
+                }
+
+                knob.style.transform = `translate(-50%, -50%) rotateZ(${knobRotation}deg)`;
                 button.classList.add('active');
-                
+
+                // Contrôle du mouvement du bras
+                tonearmContainer.style.transform = `rotateX(-70deg) rotateZ(${armRotationZ}deg)`;
+
                 updateAnimation();
             }
 
-            set33Btn.addEventListener('click', () => setSpeedAndKnob(3, 33, set33Btn));
-            setStopBtn.addEventListener('click', () => setSpeedAndKnob(0, 'stop', setStopBtn));
-            set45Btn.addEventListener('click', () => setSpeedAndKnob(2.2, 45, set45Btn));
+            // Événements
+            set33Btn.addEventListener('click', () => setSpeedAndKnob(RPM_33, set33Btn));
+            setStopBtn.addEventListener('click', () => setSpeedAndKnob(0, setStopBtn));
+            set45Btn.addEventListener('click', () => setSpeedAndKnob(RPM_45, set45Btn));
 
             pitchSlider.addEventListener('input', () => {
                 if (isRunning) {
@@ -287,10 +395,12 @@
             directionBtn.addEventListener('click', () => {
                 isReversed = !isReversed;
                 directionBtn.classList.toggle('active', isReversed);
+                directionBtn.textContent = isReversed ? 'Direction (Forward)' : 'Direction (Reverse)';
                 updateAnimation();
             });
 
-            setSpeedAndKnob(0, 'stop', setStopBtn);
+            // Initialisation à l'arrêt
+            setSpeedAndKnob(0, setStopBtn);
         });
     </script>
 </body>
